@@ -23,13 +23,13 @@ A custom Lovelace card for Home Assistant to display and edit Homematic(IP) Loca
 
 ## Manual Installation
 
-1. Download the `homematicip-local-schedule-card.js` file
+1. Download the `homematicip-local-scheduler-card.js` file
 2. Copy it to your `config/www` folder
 3. Add the following to your Lovelace resources:
 
 ```yaml
 resources:
-  - url: /local/homematicip-local-schedule-card.js
+  - url: /local/homematicip-local-scheduler-card.js
     type: module
 ```
 
@@ -38,7 +38,7 @@ resources:
 Add the card to your dashboard:
 
 ```yaml
-type: custom:homematicip-local-schedule-card
+type: custom:homematicip-local-scheduler-card
 entity: switch.living_room
 name: Living Room Schedule
 editable: true

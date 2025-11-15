@@ -25,7 +25,7 @@ import {
 } from "./utils";
 import { getTranslations, Translations } from "./localization";
 
-@customElement("homematicip-local-schedule-card")
+@customElement("homematicip-local-scheduler-card")
 export class HomematicScheduleCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config?: ScheduleCardConfig;
@@ -923,7 +923,7 @@ export class HomematicScheduleCard extends LitElement {
   }
 
   static getConfigElement() {
-    return document.createElement("homematicip-local-schedule-card-editor");
+    return document.createElement("homematicip-local-scheduler-card-editor");
   }
 
   static getStubConfig() {
@@ -949,8 +949,8 @@ declare global {
 // Register custom card
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "homematicip-local-schedule-card",
-  name: "HomematicIP Local Schedule Card",
+  type: "homematicip-local-scheduler-card",
+  name: "HomematicIP Local Scheduler Card",
   description:
     "A custom card for Homematic(IP) Local schedules (switch, valve, cover, light, lock)",
 });

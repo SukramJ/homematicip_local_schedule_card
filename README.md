@@ -84,12 +84,12 @@ Example: `[2, 8, 32]` = Monday, Wednesday, Friday
 
 ### Manual Installation
 
-1. Download the `homematicip-local-schedule-card.js` file from the latest release
+1. Download the `homematicip-local-scheduler-card.js` file from the latest release
 2. Copy it to your `config/www` folder
 3. Add the resource to your Lovelace dashboard:
    - Go to Settings → Dashboards → Resources
    - Click "Add Resource"
-   - URL: `/local/homematicip-local-schedule-card.js`
+   - URL: `/local/homematicip-local-scheduler-card.js`
    - Resource type: JavaScript Module
 
 ## Configuration
@@ -97,14 +97,14 @@ Example: `[2, 8, 32]` = Monday, Wednesday, Friday
 ### Basic Configuration
 
 ```yaml
-type: custom:homematicip-local-schedule-card
+type: custom:homematicip-local-scheduler-card
 entity: switch.your_device
 ```
 
 ### Multiple Entities
 
 ```yaml
-type: custom:homematicip-local-schedule-card
+type: custom:homematicip-local-scheduler-card
 entities:
   - switch.living_room
   - switch.bedroom
@@ -114,7 +114,7 @@ entities:
 ### Full Configuration
 
 ```yaml
-type: custom:homematicip-local-schedule-card
+type: custom:homematicip-local-scheduler-card
 entity: switch.living_room
 name: Living Room Schedule
 editable: true
@@ -193,7 +193,7 @@ src/
 ├── utils.test.ts      # Utils tests
 ├── localization.ts    # Translations (EN, DE)
 ├── localization.test.ts
-└── homematicip-local-schedule-card.ts  # Main Lit element (TODO)
+└── homematicip-local-scheduler-card.ts  # Main Lit element
 ```
 
 ## Technical Details

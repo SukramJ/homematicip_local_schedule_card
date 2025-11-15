@@ -12,8 +12,8 @@ function copyToRoot() {
     name: "copy-to-root",
     writeBundle() {
       copyFileSync(
-        "dist/homematicip-local-schedule-card.js",
-        "homematicip-local-schedule-card.js"
+        "dist/homematicip-local-scheduler-card.js",
+        "homematicip-local-scheduler-card.js"
       );
       console.log("✓ Copied to root for HACS");
     },
@@ -21,9 +21,9 @@ function copyToRoot() {
 }
 
 export default {
-  input: "src/homematicip-local-schedule-card.ts",
+  input: "src/homematicip-local-scheduler-card.ts",
   output: {
-    file: "dist/homematicip-local-schedule-card.js",
+    file: "dist/homematicip-local-scheduler-card.js",
     format: "es",
     sourcemap: false,
   },

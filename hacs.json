@@ -1,6 +1,6 @@
 {
   "name": "HomematicIP Local Schedule Card",
   "render_readme": true,
-  "filename": "homematicip-local-schedule-card.js",
+  "filename": "homematicip-local-scheduler-card.js",
   "content_in_root": true
 }
