@@ -6,10 +6,6 @@ A custom Lovelace card for Home Assistant to display and edit Homematic(IP) Loca
 
 **⚠️ Work in Progress**: This project is under active development and based on the event-based schedule API of Homematic(IP) Local.
 
-![Card Screenshot](images/screenshot.png)
-
-_Example of the schedule card showing a weekly switch schedule_
-
 ## Features
 
 - 📅 **Event-Based Scheduling**: Manage individual schedule events with precise control
@@ -26,10 +22,6 @@ _Example of the schedule card showing a weekly switch schedule_
 - **LIGHT**: Lights with dimming and ramp time support
 - **COVER**: Blinds/shutters with position and slat control (LEVEL + LEVEL_2)
 - **VALVE**: Heating valves
-
-![Device Types](images/device-types.png)
-
-_Different device types with category-specific controls_
 
 ## API Structure
 
@@ -77,7 +69,7 @@ Example: `[2, 8, 32]` = Monday, Wednesday, Friday
 1. Make sure [HACS](https://hacs.xyz/) is installed
 2. In HACS, go to "Frontend"
 3. Click the three-dot menu and select "Custom repositories"
-4. Add this repository URL: `https://github.com/SukramJ/homematicip_local_scheduler_card`
+4. Add this repository URL: `https://github.com/SukramJ/homematicip_local_schedule_card`
 5. Select category "Lovelace"
 6. Click "Install"
 7. Restart Home Assistant
@@ -243,4 +235,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-For issues and questions, please use the [GitHub Issues](https://github.com/SukramJ/homematicip_local_scheduler_card/issues) page.
+For issues and questions, please use the [GitHub Issues](https://github.com/SukramJ/homematicip_local_schedule_card/issues) page.
