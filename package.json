@@ -34,12 +34,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/SukramJ/homematicip_local_schedule_card.git"
+    "url": "https://github.com/SukramJ/homematicip_local_scheduler_card.git"
   },
   "bugs": {
-    "url": "https://github.com/SukramJ/homematicip_local_schedule_card/issues"
+    "url": "https://github.com/SukramJ/homematicip_local_scheduler_card/issues"
   },
-  "homepage": "https://github.com/SukramJ/homematicip_local_schedule_card#readme",
+  "homepage": "https://github.com/SukramJ/homematicip_local_scheduler_card#readme",
   "author": "",
   "license": "MIT",
   "dependencies": {

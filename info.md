@@ -88,7 +88,7 @@ The card displays schedule events with time, weekdays, and action (level/positio
 
 ## Support
 
-For issues and feature requests, please visit: [GitHub Issues](https://github.com/SukramJ/homematicip_local_schedule_card/issues)
+For issues and feature requests, please visit: [GitHub Issues](https://github.com/SukramJ/homematicip_local_scheduler_card/issues)
 
 ## License
 

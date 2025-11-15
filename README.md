@@ -69,7 +69,7 @@ Example: `[2, 8, 32]` = Monday, Wednesday, Friday
 1. Make sure [HACS](https://hacs.xyz/) is installed
 2. In HACS, go to "Frontend"
 3. Click the three-dot menu and select "Custom repositories"
-4. Add this repository URL: `https://github.com/SukramJ/homematicip_local_schedule_card`
+4. Add this repository URL: `https://github.com/SukramJ/homematicip_local_scheduler_card`
 5. Select category "Lovelace"
 6. Click "Install"
 7. Restart Home Assistant
@@ -235,4 +235,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-For issues and questions, please use the [GitHub Issues](https://github.com/SukramJ/homematicip_local_schedule_card/issues) page.
+For issues and questions, please use the [GitHub Issues](https://github.com/SukramJ/homematicip_local_scheduler_card/issues) page.
