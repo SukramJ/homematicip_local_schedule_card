@@ -66,7 +66,9 @@ function t(t,e,i,s){var n,o=arguments.length,r=o<3?e:null===s?s=Object.getOwnPro
       <div class="editor-overlay" @click=${this._closeEditor}>
         <div class="editor-dialog" @click=${t=>t.stopPropagation()}>
           <div class="editor-header">
-            <h3>${t?this._translations.ui.addEvent:this._translations.ui.editEvent}</h3>
+            <h3>
+              ${t?this._translations.ui.addEvent:this._translations.ui.editEvent}
+            </h3>
             <button @click=${this._closeEditor} class="close-button">✕</button>
           </div>
           <div class="editor-content">
