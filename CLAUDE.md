@@ -44,6 +44,7 @@ The card is implemented as a single Lit web component: `homematicip-local-schedu
 **File**: `src/homematicip-local-scheduler-card.ts`
 
 Key responsibilities:
+
 - Renders schedule events in a table view
 - Provides editing UI for schedule events
 - Communicates with Home Assistant via `hass.callService()`
@@ -55,6 +56,7 @@ Key responsibilities:
 **File**: `src/types.ts`
 
 Core types:
+
 - `ScheduleEvent`: Represents a single schedule event with timing, action, and condition
 - `ScheduleDict`: Map of event groups (string keys: "1", "2", ...)
 - `DatapointCategory`: Device type ("SWITCH" | "LOCK" | "LIGHT" | "COVER" | "VALVE")
@@ -66,6 +68,7 @@ Core types:
 **File**: `src/utils.ts`
 
 Key utility categories:
+
 1. **Bitwise Operations**: Convert between bitwise flags and arrays
 2. **Validation**: Validate event data
 3. **Formatting**: Format levels, durations, times
@@ -76,6 +79,7 @@ Key utility categories:
 ### 1. Event-Based Scheduling
 
 Unlike traditional time-slot schedules, this card uses **event-based scheduling**. Each event defines:
+
 - **When**: Time (fixed or astronomical) + weekdays
 - **What**: Target channels + action (level, duration, ramp)
 - **How**: Trigger condition (fixed time vs. sunrise/sunset)
@@ -85,14 +89,15 @@ Unlike traditional time-slot schedules, this card uses **event-based scheduling*
 The Homematic API uses **bitwise flags** for weekdays and channels.
 
 **Weekday Bits**:
+
 ```typescript
-SUNDAY = 1     // 0b0000001
-MONDAY = 2     // 0b0000010
-TUESDAY = 4    // 0b0000100
-WEDNESDAY = 8  // 0b0001000
-THURSDAY = 16  // 0b0010000
-FRIDAY = 32    // 0b0100000
-SATURDAY = 64  // 0b1000000
+SUNDAY = 1; // 0b0000001
+MONDAY = 2; // 0b0000010
+TUESDAY = 4; // 0b0000100
+WEDNESDAY = 8; // 0b0001000
+THURSDAY = 16; // 0b0010000
+FRIDAY = 32; // 0b0100000
+SATURDAY = 64; // 0b1000000
 ```
 
 **Example**: Monday + Wednesday + Friday = `[2, 4, 32]`
@@ -100,6 +105,7 @@ SATURDAY = 64  // 0b1000000
 **Channel Bits**: Similar concept for target channels (1, 2, 4, 8, ...)
 
 **Important Functions**:
+
 - `weekdayBitsToBitwise(bits: number[]): number` - Converts [2,4,32] to 38
 - `bitwiseToWeekdayBits(bitwise: number): number[]` - Converts 38 to [2,4,32]
 - `weekdayBitsToNames(bits: number[]): Weekday[]` - Converts [2,4,32] to ["MONDAY","TUESDAY","FRIDAY"]
@@ -111,25 +117,25 @@ Each `ScheduleEvent` has these fields:
 ```typescript
 interface ScheduleEvent {
   // Timing
-  FIXED_HOUR: number;           // 0-23
-  FIXED_MINUTE: number;         // 0-59
-  WEEKDAY: WeekdayBit[];        // e.g., [2, 4, 32]
+  FIXED_HOUR: number; // 0-23
+  FIXED_MINUTE: number; // 0-59
+  WEEKDAY: WeekdayBit[]; // e.g., [2, 4, 32]
 
   // Target
-  TARGET_CHANNELS: number[];    // e.g., [1] or [1, 2]
+  TARGET_CHANNELS: number[]; // e.g., [1] or [1, 2]
 
   // Action
-  LEVEL: number;                // 0/1 for SWITCH/LOCK, 0.0-1.0 for others
-  LEVEL_2?: number;             // Optional, only for COVER (slat position)
+  LEVEL: number; // 0/1 for SWITCH/LOCK, 0.0-1.0 for others
+  LEVEL_2?: number; // Optional, only for COVER (slat position)
 
   // Trigger Condition
   CONDITION: ScheduleCondition; // 0=FIXED_TIME, 1=ASTRO
-  ASTRO_TYPE: AstroType;        // 0=SUNRISE, 1=SUNSET
-  ASTRO_OFFSET: number;         // Offset in minutes (-120 to +120)
+  ASTRO_TYPE: AstroType; // 0=SUNRISE, 1=SUNSET
+  ASTRO_OFFSET: number; // Offset in minutes (-120 to +120)
 
   // Duration (SWITCH/LIGHT only)
-  DURATION_BASE?: TimeBase;     // 0-7 (see TimeBase enum)
-  DURATION_FACTOR?: number;     // Multiplier
+  DURATION_BASE?: TimeBase; // 0-7 (see TimeBase enum)
+  DURATION_FACTOR?: number; // Multiplier
 
   // Ramp Time (LIGHT only)
   RAMP_TIME_BASE?: TimeBase;
@@ -153,14 +159,14 @@ Duration and ramp times use a **base + factor** system:
 
 ```typescript
 enum TimeBase {
-  MS_100 = 0,  // 100 milliseconds
-  SEC_1 = 1,   // 1 second
-  SEC_5 = 2,   // 5 seconds
-  SEC_10 = 3,  // 10 seconds
-  MIN_1 = 4,   // 1 minute
-  MIN_5 = 5,   // 5 minutes
-  MIN_10 = 6,  // 10 minutes
-  HOUR_1 = 7,  // 1 hour
+  MS_100 = 0, // 100 milliseconds
+  SEC_1 = 1, // 1 second
+  SEC_5 = 2, // 5 seconds
+  SEC_10 = 3, // 10 seconds
+  MIN_1 = 4, // 1 minute
+  MIN_5 = 5, // 5 minutes
+  MIN_10 = 6, // 10 minutes
+  HOUR_1 = 7, // 1 hour
 }
 ```
 
@@ -171,7 +177,7 @@ enum TimeBase {
 The card reads data from the `schedule_data` attribute of Homematic entities:
 
 ```typescript
-hass.states[entityId].attributes.schedule_data
+hass.states[entityId].attributes.schedule_data;
 ```
 
 To update schedules, it calls the service:
@@ -179,7 +185,7 @@ To update schedules, it calls the service:
 ```typescript
 hass.callService("homematicip_local", "set_schedule", {
   entity_id: entityId,
-  schedule_data: scheduleDict
+  schedule_data: scheduleDict,
 });
 ```
 
@@ -193,7 +199,7 @@ hass.callService("homematicip_local", "set_schedule", {
   - Classes: PascalCase
   - Functions/variables: camelCase
   - Constants: UPPER_SNAKE_CASE
-  - Private class members: _prefixed
+  - Private class members: \_prefixed
 
 ### Testing
 
@@ -202,6 +208,7 @@ hass.callService("homematicip_local", "set_schedule", {
 - **Test files**: Co-located with source (e.g., `utils.test.ts` next to `utils.ts`)
 
 Run tests:
+
 ```bash
 npm test              # Run all tests
 npm run test:watch    # Watch mode
@@ -211,11 +218,13 @@ npm run test:coverage # Coverage report
 ### Validation
 
 Before committing, always run:
+
 ```bash
 npm run validate      # Runs lint + type-check + test + build
 ```
 
 Pre-commit hooks (via Husky) automatically run:
+
 - ESLint auto-fix on `*.ts` files
 - Prettier formatting on `*.{ts,js,json,md}`
 - Jest tests on affected files
@@ -278,7 +287,7 @@ export const translations = {
   de: {
     your_new_key: "Deutscher Text",
     // ...
-  }
+  },
 };
 ```
 
@@ -289,12 +298,14 @@ Access in component: `this._translations.your_new_key`
 ### State Management
 
 The card uses Lit's reactive properties:
+
 - `@property()`: Public props that trigger re-render (e.g., `hass`)
 - `@state()`: Private state that triggers re-render (e.g., `_scheduleData`)
 
 ### Event Updates
 
 When a schedule is modified:
+
 1. User edits in the UI
 2. Card validates the event (`validateEvent()`)
 3. Card converts to backend format (`convertToBackendFormat()`)
@@ -305,6 +316,7 @@ When a schedule is modified:
 ### Validation Rules
 
 See `validateEvent()` in `utils.ts`:
+
 - Hours: 0-23
 - Minutes: 0-59
 - Astro offset: -120 to +120
