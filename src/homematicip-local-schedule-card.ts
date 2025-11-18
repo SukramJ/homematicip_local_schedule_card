@@ -26,7 +26,7 @@ import {
 } from "./utils";
 import { getTranslations, Translations } from "./localization";
 
-@customElement("homematicip-local-scheduler-card")
+@customElement("homematicip-local-schedule-card")
 export class HomematicScheduleCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config?: ScheduleCardConfig;
