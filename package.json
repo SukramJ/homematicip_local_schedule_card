@@ -68,7 +68,7 @@
     "rollup": "^4.9.0",
     "ts-jest": "^29.1.1",
     "typescript": "^5.3.3",
-    "typescript-eslint": "^8.16.0"
+    "typescript-eslint": "^8.47.0"
   },
   "lint-staged": {
     "*.ts": [
