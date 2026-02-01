@@ -180,6 +180,8 @@ export interface ScheduleEntityAttributes {
   schedule_data: ScheduleDict;
   friendly_name?: string;
   datapoint_category?: DatapointCategory;
+  interface_id?: string; // e.g., "hmip_local-BidCos-RF", "hmip_local-HmIP-RF"
+  address?: string; // e.g., "000C9709AEF157:1" (device_address:channel_no)
 }
 
 export interface HassEntity {
