@@ -1,15 +1,10 @@
 import {
   WEEKDAYS,
-  WEEKDAY_LABELS,
-  WEEKDAY_LABELS_DE,
-  WEEKDAY_TO_BIT,
   Weekday,
-  WeekdayBit,
-  DatapointCategory,
-  AstroType,
-  ScheduleCondition,
-  TimeBase,
-  TIME_BASE_LABELS,
+  ScheduleDomain,
+  DOMAIN_FIELD_CONFIG,
+  CONDITION_TYPES,
+  DURATION_UNITS,
 } from "./types";
 
 describe("Types", () => {
@@ -28,32 +23,6 @@ describe("Types", () => {
     });
   });
 
-  describe("WEEKDAY_LABELS", () => {
-    it("should have labels for all weekdays", () => {
-      expect(Object.keys(WEEKDAY_LABELS)).toHaveLength(7);
-      expect(WEEKDAY_LABELS.MONDAY).toBe("Mo");
-      expect(WEEKDAY_LABELS.TUESDAY).toBe("Tu");
-      expect(WEEKDAY_LABELS.WEDNESDAY).toBe("We");
-      expect(WEEKDAY_LABELS.THURSDAY).toBe("Th");
-      expect(WEEKDAY_LABELS.FRIDAY).toBe("Fr");
-      expect(WEEKDAY_LABELS.SATURDAY).toBe("Sa");
-      expect(WEEKDAY_LABELS.SUNDAY).toBe("Su");
-    });
-  });
-
-  describe("WEEKDAY_LABELS_DE", () => {
-    it("should have German labels for all weekdays", () => {
-      expect(Object.keys(WEEKDAY_LABELS_DE)).toHaveLength(7);
-      expect(WEEKDAY_LABELS_DE.MONDAY).toBe("Mo");
-      expect(WEEKDAY_LABELS_DE.TUESDAY).toBe("Di");
-      expect(WEEKDAY_LABELS_DE.WEDNESDAY).toBe("Mi");
-      expect(WEEKDAY_LABELS_DE.THURSDAY).toBe("Do");
-      expect(WEEKDAY_LABELS_DE.FRIDAY).toBe("Fr");
-      expect(WEEKDAY_LABELS_DE.SATURDAY).toBe("Sa");
-      expect(WEEKDAY_LABELS_DE.SUNDAY).toBe("So");
-    });
-  });
-
   describe("Weekday type", () => {
     it("should accept valid weekday values", () => {
       const monday: Weekday = "MONDAY";
@@ -64,104 +33,87 @@ describe("Types", () => {
     });
   });
 
-  describe("DatapointCategory type", () => {
-    it("should accept valid category values", () => {
-      const switchCat: DatapointCategory = "SWITCH";
-      const lockCat: DatapointCategory = "LOCK";
-      const lightCat: DatapointCategory = "LIGHT";
-      const coverCat: DatapointCategory = "COVER";
-      const valveCat: DatapointCategory = "VALVE";
+  describe("ScheduleDomain type", () => {
+    it("should accept valid domain values", () => {
+      const switchDomain: ScheduleDomain = "switch";
+      const lightDomain: ScheduleDomain = "light";
+      const coverDomain: ScheduleDomain = "cover";
+      const valveDomain: ScheduleDomain = "valve";
 
-      expect(switchCat).toBe("SWITCH");
-      expect(lockCat).toBe("LOCK");
-      expect(lightCat).toBe("LIGHT");
-      expect(coverCat).toBe("COVER");
-      expect(valveCat).toBe("VALVE");
+      expect(switchDomain).toBe("switch");
+      expect(lightDomain).toBe("light");
+      expect(coverDomain).toBe("cover");
+      expect(valveDomain).toBe("valve");
     });
   });
 
-  describe("WeekdayBit enum", () => {
-    it("should have correct bit values", () => {
-      expect(WeekdayBit.SUNDAY).toBe(1);
-      expect(WeekdayBit.MONDAY).toBe(2);
-      expect(WeekdayBit.TUESDAY).toBe(4);
-      expect(WeekdayBit.WEDNESDAY).toBe(8);
-      expect(WeekdayBit.THURSDAY).toBe(16);
-      expect(WeekdayBit.FRIDAY).toBe(32);
-      expect(WeekdayBit.SATURDAY).toBe(64);
+  describe("DOMAIN_FIELD_CONFIG", () => {
+    it("should have config for all 4 domains", () => {
+      expect(Object.keys(DOMAIN_FIELD_CONFIG)).toHaveLength(4);
+      expect(DOMAIN_FIELD_CONFIG).toHaveProperty("switch");
+      expect(DOMAIN_FIELD_CONFIG).toHaveProperty("light");
+      expect(DOMAIN_FIELD_CONFIG).toHaveProperty("cover");
+      expect(DOMAIN_FIELD_CONFIG).toHaveProperty("valve");
     });
 
-    it("should allow bitwise operations", () => {
-      // All weekdays: 1 + 2 + 4 + 8 + 16 + 32 + 64 = 127
-      const allWeekdays =
-        WeekdayBit.SUNDAY |
-        WeekdayBit.MONDAY |
-        WeekdayBit.TUESDAY |
-        WeekdayBit.WEDNESDAY |
-        WeekdayBit.THURSDAY |
-        WeekdayBit.FRIDAY |
-        WeekdayBit.SATURDAY;
-      expect(allWeekdays).toBe(127);
-
-      // Monday + Wednesday + Friday: 2 + 8 + 32 = 42
-      const mwf = WeekdayBit.MONDAY | WeekdayBit.WEDNESDAY | WeekdayBit.FRIDAY;
-      expect(mwf).toBe(42);
+    it("should have correct switch config", () => {
+      expect(DOMAIN_FIELD_CONFIG.switch).toEqual({
+        levelType: "binary",
+        hasLevel2: false,
+        hasDuration: true,
+        hasRampTime: false,
+      });
     });
-  });
 
-  describe("WEEKDAY_TO_BIT", () => {
-    it("should map weekday names to bit values", () => {
-      expect(WEEKDAY_TO_BIT.SUNDAY).toBe(WeekdayBit.SUNDAY);
-      expect(WEEKDAY_TO_BIT.MONDAY).toBe(WeekdayBit.MONDAY);
-      expect(WEEKDAY_TO_BIT.TUESDAY).toBe(WeekdayBit.TUESDAY);
-      expect(WEEKDAY_TO_BIT.WEDNESDAY).toBe(WeekdayBit.WEDNESDAY);
-      expect(WEEKDAY_TO_BIT.THURSDAY).toBe(WeekdayBit.THURSDAY);
-      expect(WEEKDAY_TO_BIT.FRIDAY).toBe(WeekdayBit.FRIDAY);
-      expect(WEEKDAY_TO_BIT.SATURDAY).toBe(WeekdayBit.SATURDAY);
+    it("should have correct light config", () => {
+      expect(DOMAIN_FIELD_CONFIG.light).toEqual({
+        levelType: "percentage",
+        hasLevel2: false,
+        hasDuration: true,
+        hasRampTime: true,
+      });
     });
-  });
 
-  describe("AstroType enum", () => {
-    it("should have correct values", () => {
-      expect(AstroType.SUNRISE).toBe(0);
-      expect(AstroType.SUNSET).toBe(1);
+    it("should have correct cover config", () => {
+      expect(DOMAIN_FIELD_CONFIG.cover).toEqual({
+        levelType: "percentage",
+        hasLevel2: true,
+        hasDuration: false,
+        hasRampTime: false,
+      });
+    });
+
+    it("should have correct valve config", () => {
+      expect(DOMAIN_FIELD_CONFIG.valve).toEqual({
+        levelType: "percentage",
+        hasLevel2: false,
+        hasDuration: true,
+        hasRampTime: false,
+      });
     });
   });
 
-  describe("ScheduleCondition enum", () => {
-    it("should have correct values", () => {
-      expect(ScheduleCondition.FIXED_TIME).toBe(0);
-      expect(ScheduleCondition.ASTRO).toBe(1);
+  describe("CONDITION_TYPES", () => {
+    it("should contain all 8 condition types", () => {
+      expect(CONDITION_TYPES).toHaveLength(8);
+      expect(CONDITION_TYPES).toContain("fixed_time");
+      expect(CONDITION_TYPES).toContain("astro");
+      expect(CONDITION_TYPES).toContain("fixed_if_before_astro");
+      expect(CONDITION_TYPES).toContain("astro_if_before_fixed");
+      expect(CONDITION_TYPES).toContain("fixed_if_after_astro");
+      expect(CONDITION_TYPES).toContain("astro_if_after_fixed");
+      expect(CONDITION_TYPES).toContain("earliest");
+      expect(CONDITION_TYPES).toContain("latest");
     });
   });
 
-  describe("TimeBase enum", () => {
-    it("should have correct values", () => {
-      expect(TimeBase.MS_100).toBe(0);
-      expect(TimeBase.SEC_1).toBe(1);
-      expect(TimeBase.SEC_5).toBe(2);
-      expect(TimeBase.SEC_10).toBe(3);
-      expect(TimeBase.MIN_1).toBe(4);
-      expect(TimeBase.MIN_5).toBe(5);
-      expect(TimeBase.MIN_10).toBe(6);
-      expect(TimeBase.HOUR_1).toBe(7);
-    });
-  });
-
-  describe("TIME_BASE_LABELS", () => {
-    it("should have labels for all time bases", () => {
-      expect(TIME_BASE_LABELS[TimeBase.MS_100]).toBe("100ms");
-      expect(TIME_BASE_LABELS[TimeBase.SEC_1]).toBe("1s");
-      expect(TIME_BASE_LABELS[TimeBase.SEC_5]).toBe("5s");
-      expect(TIME_BASE_LABELS[TimeBase.SEC_10]).toBe("10s");
-      expect(TIME_BASE_LABELS[TimeBase.MIN_1]).toBe("1m");
-      expect(TIME_BASE_LABELS[TimeBase.MIN_5]).toBe("5m");
-      expect(TIME_BASE_LABELS[TimeBase.MIN_10]).toBe("10m");
-      expect(TIME_BASE_LABELS[TimeBase.HOUR_1]).toBe("1h");
-    });
-
-    it("should have all 8 time base labels", () => {
-      expect(Object.keys(TIME_BASE_LABELS)).toHaveLength(8);
+  describe("DURATION_UNITS", () => {
+    it("should contain all 4 duration units", () => {
+      expect(DURATION_UNITS).toHaveLength(4);
+      expect(DURATION_UNITS).toContain("ms");
+      expect(DURATION_UNITS).toContain("s");
+      expect(DURATION_UNITS).toContain("min");
+      expect(DURATION_UNITS).toContain("h");
     });
   });
 });

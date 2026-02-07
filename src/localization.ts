@@ -1,4 +1,4 @@
-import type { DatapointCategory } from "./types";
+import type { ScheduleDomain } from "./types";
 
 type WeekdayLabels = {
   monday: string;
@@ -10,12 +10,22 @@ type WeekdayLabels = {
   sunday: string;
 };
 
-type CategoryLabels = {
-  SWITCH: string;
-  LOCK: string;
-  LIGHT: string;
-  COVER: string;
-  VALVE: string;
+type DomainLabels = {
+  switch: string;
+  light: string;
+  cover: string;
+  valve: string;
+};
+
+type ConditionLabels = {
+  fixed_time: string;
+  astro: string;
+  fixed_if_before_astro: string;
+  astro_if_before_fixed: string;
+  fixed_if_after_astro: string;
+  astro_if_after_fixed: string;
+  earliest: string;
+  latest: string;
 };
 
 export interface Translations {
@@ -24,8 +34,10 @@ export interface Translations {
     short: WeekdayLabels;
     long: WeekdayLabels;
   };
-  // Category labels
-  categories: CategoryLabels;
+  // Domain labels
+  domains: DomainLabels;
+  // Condition labels
+  conditions: ConditionLabels;
   // UI labels and messages
   ui: {
     schedule: string;
@@ -57,14 +69,22 @@ export interface Translations {
     disableDragDrop: string;
     confirmDiscardChanges: string;
     level: string;
-    slat: string; // For BLIND LEVEL_2
+    levelOn: string;
+    levelOff: string;
+    slat: string;
     addEvent: string;
     editEvent: string;
     time: string;
     duration: string;
+    rampTime: string;
     state: string;
     weekdays: string;
     channels: string;
+    condition: string;
+    astroSunrise: string;
+    astroSunset: string;
+    astroOffset: string;
+    maxEntriesReached: string;
     confirmDelete: string;
   };
   // Error messages
@@ -78,6 +98,7 @@ export interface Translations {
     invalidImportFile: string;
     invalidImportFormat: string;
     invalidImportData: string;
+    incompatibleEntity: string;
   };
   // Validation warnings
   warnings: {
@@ -107,12 +128,21 @@ const en: Translations = {
       sunday: "Sunday",
     },
   },
-  categories: {
-    SWITCH: "Switch",
-    LOCK: "Lock",
-    LIGHT: "Light",
-    COVER: "Cover",
-    VALVE: "Valve",
+  domains: {
+    switch: "Switch",
+    light: "Light",
+    cover: "Cover",
+    valve: "Valve",
+  },
+  conditions: {
+    fixed_time: "Fixed Time",
+    astro: "Astro",
+    fixed_if_before_astro: "Fixed if before Astro",
+    astro_if_before_fixed: "Astro if before Fixed",
+    fixed_if_after_astro: "Fixed if after Astro",
+    astro_if_after_fixed: "Astro if after Fixed",
+    earliest: "Earliest",
+    latest: "Latest",
   },
   ui: {
     schedule: "Schedule",
@@ -144,14 +174,22 @@ const en: Translations = {
     disableDragDrop: "Disable drag & drop mode",
     confirmDiscardChanges: "You have unsaved changes. Do you want to discard them?",
     level: "Level",
+    levelOn: "On",
+    levelOff: "Off",
     slat: "Slat Position",
     addEvent: "Add Event",
     editEvent: "Edit Event",
     time: "Time",
     duration: "Duration",
+    rampTime: "Ramp Time",
     state: "State",
     weekdays: "Weekdays",
     channels: "Target Channels",
+    condition: "Condition",
+    astroSunrise: "Sunrise",
+    astroSunset: "Sunset",
+    astroOffset: "Astro Offset (min)",
+    maxEntriesReached: "Maximum number of entries reached ({max})",
     confirmDelete: "Are you sure you want to delete this event?",
   },
   errors: {
@@ -164,6 +202,8 @@ const en: Translations = {
     invalidImportFile: "Invalid file format. Please select a JSON file.",
     invalidImportFormat: "Invalid JSON format in file.",
     invalidImportData: "Invalid schedule data: {error}",
+    incompatibleEntity:
+      "Entity {entity} is not a compatible schedule entity (requires schedule_type 'default' and schedule_api_version 'v1.0')",
   },
   warnings: {
     title: "Validation Warnings",
@@ -192,12 +232,21 @@ const de: Translations = {
       sunday: "Sonntag",
     },
   },
-  categories: {
-    SWITCH: "Schalter",
-    LOCK: "Schloss",
-    LIGHT: "Licht",
-    COVER: "Rollladen",
-    VALVE: "Ventil",
+  domains: {
+    switch: "Schalter",
+    light: "Licht",
+    cover: "Rollladen",
+    valve: "Ventil",
+  },
+  conditions: {
+    fixed_time: "Feste Zeit",
+    astro: "Astro",
+    fixed_if_before_astro: "Fest wenn vor Astro",
+    astro_if_before_fixed: "Astro wenn vor Fest",
+    fixed_if_after_astro: "Fest wenn nach Astro",
+    astro_if_after_fixed: "Astro wenn nach Fest",
+    earliest: "Frühester",
+    latest: "Spätester",
   },
   ui: {
     schedule: "Zeitplan",
@@ -229,14 +278,22 @@ const de: Translations = {
     disableDragDrop: "Drag & Drop Modus deaktivieren",
     confirmDiscardChanges: "Sie haben ungespeicherte Änderungen. Möchten Sie diese verwerfen?",
     level: "Stufe",
+    levelOn: "Ein",
+    levelOff: "Aus",
     slat: "Lamellenposition",
     addEvent: "Ereignis hinzufügen",
     editEvent: "Ereignis bearbeiten",
     time: "Zeit",
     duration: "Dauer",
+    rampTime: "Rampenzeit",
     state: "Zustand",
     weekdays: "Wochentage",
     channels: "Zielkanäle",
+    condition: "Bedingung",
+    astroSunrise: "Sonnenaufgang",
+    astroSunset: "Sonnenuntergang",
+    astroOffset: "Astro-Offset (Min.)",
+    maxEntriesReached: "Maximale Anzahl an Einträgen erreicht ({max})",
     confirmDelete: "Möchten Sie dieses Ereignis wirklich löschen?",
   },
   errors: {
@@ -249,6 +306,8 @@ const de: Translations = {
     invalidImportFile: "Ungültiges Dateiformat. Bitte wählen Sie eine JSON-Datei.",
     invalidImportFormat: "Ungültiges JSON-Format in der Datei.",
     invalidImportData: "Ungültige Zeitplandaten: {error}",
+    incompatibleEntity:
+      "Entität {entity} ist keine kompatible Zeitplan-Entität (erfordert schedule_type 'default' und schedule_api_version 'v1.0')",
   },
   warnings: {
     title: "Validierungswarnungen",
@@ -279,8 +338,8 @@ export function formatString(template: string, params: Record<string, string>): 
   return result;
 }
 
-export function getCategoryLabel(category: DatapointCategory | undefined, lang: string): string {
-  if (!category) return "";
+export function getDomainLabel(domain: ScheduleDomain | undefined, lang: string): string {
+  if (!domain) return "";
   const t = getTranslations(lang);
-  return t.categories[category] || category;
+  return t.domains[domain] || domain;
 }

@@ -1,4 +1,4 @@
-import { getTranslations, formatString, getCategoryLabel } from "./localization";
+import { getTranslations, formatString, getDomainLabel } from "./localization";
 
 describe("localization", () => {
   describe("getTranslations", () => {
@@ -22,22 +22,74 @@ describe("localization", () => {
       );
     });
 
-    it("should have category labels in English", () => {
+    it("should have domain labels in English", () => {
       const translations = getTranslations("en");
-      expect(translations.categories.SWITCH).toBe("Switch");
-      expect(translations.categories.LOCK).toBe("Lock");
-      expect(translations.categories.LIGHT).toBe("Light");
-      expect(translations.categories.COVER).toBe("Cover");
-      expect(translations.categories.VALVE).toBe("Valve");
+      expect(translations.domains.switch).toBe("Switch");
+      expect(translations.domains.light).toBe("Light");
+      expect(translations.domains.cover).toBe("Cover");
+      expect(translations.domains.valve).toBe("Valve");
     });
 
-    it("should have category labels in German", () => {
+    it("should have domain labels in German", () => {
       const translations = getTranslations("de");
-      expect(translations.categories.SWITCH).toBe("Schalter");
-      expect(translations.categories.LOCK).toBe("Schloss");
-      expect(translations.categories.LIGHT).toBe("Licht");
-      expect(translations.categories.COVER).toBe("Rollladen");
-      expect(translations.categories.VALVE).toBe("Ventil");
+      expect(translations.domains.switch).toBe("Schalter");
+      expect(translations.domains.light).toBe("Licht");
+      expect(translations.domains.cover).toBe("Rollladen");
+      expect(translations.domains.valve).toBe("Ventil");
+    });
+
+    it("should have condition labels in English", () => {
+      const translations = getTranslations("en");
+      expect(translations.conditions.fixed_time).toBe("Fixed Time");
+      expect(translations.conditions.astro).toBe("Astro");
+      expect(translations.conditions.fixed_if_before_astro).toBe("Fixed if before Astro");
+      expect(translations.conditions.astro_if_before_fixed).toBe("Astro if before Fixed");
+      expect(translations.conditions.fixed_if_after_astro).toBe("Fixed if after Astro");
+      expect(translations.conditions.astro_if_after_fixed).toBe("Astro if after Fixed");
+      expect(translations.conditions.earliest).toBe("Earliest");
+      expect(translations.conditions.latest).toBe("Latest");
+    });
+
+    it("should have condition labels in German", () => {
+      const translations = getTranslations("de");
+      expect(translations.conditions.fixed_time).toBe("Feste Zeit");
+      expect(translations.conditions.astro).toBe("Astro");
+      expect(translations.conditions.earliest).toBe("Frühester");
+      expect(translations.conditions.latest).toBe("Spätester");
+    });
+
+    it("should have new UI labels in English", () => {
+      const translations = getTranslations("en");
+      expect(translations.ui.levelOn).toBe("On");
+      expect(translations.ui.levelOff).toBe("Off");
+      expect(translations.ui.rampTime).toBe("Ramp Time");
+      expect(translations.ui.condition).toBe("Condition");
+      expect(translations.ui.astroSunrise).toBe("Sunrise");
+      expect(translations.ui.astroSunset).toBe("Sunset");
+      expect(translations.ui.astroOffset).toBe("Astro Offset (min)");
+      expect(translations.ui.maxEntriesReached).toBe("Maximum number of entries reached ({max})");
+    });
+
+    it("should have new UI labels in German", () => {
+      const translations = getTranslations("de");
+      expect(translations.ui.levelOn).toBe("Ein");
+      expect(translations.ui.levelOff).toBe("Aus");
+      expect(translations.ui.rampTime).toBe("Rampenzeit");
+      expect(translations.ui.condition).toBe("Bedingung");
+      expect(translations.ui.astroSunrise).toBe("Sonnenaufgang");
+      expect(translations.ui.astroSunset).toBe("Sonnenuntergang");
+    });
+
+    it("should have incompatibleEntity error in English", () => {
+      const translations = getTranslations("en");
+      expect(translations.errors.incompatibleEntity).toContain("schedule_type");
+      expect(translations.errors.incompatibleEntity).toContain("schedule_api_version");
+    });
+
+    it("should have incompatibleEntity error in German", () => {
+      const translations = getTranslations("de");
+      expect(translations.errors.incompatibleEntity).toContain("schedule_type");
+      expect(translations.errors.incompatibleEntity).toContain("schedule_api_version");
     });
 
     it("should normalize language codes with region (e.g., 'en-US' -> 'en')", () => {
@@ -103,25 +155,23 @@ describe("localization", () => {
     });
   });
 
-  describe("getCategoryLabel", () => {
-    it("should return English category labels", () => {
-      expect(getCategoryLabel("SWITCH", "en")).toBe("Switch");
-      expect(getCategoryLabel("LOCK", "en")).toBe("Lock");
-      expect(getCategoryLabel("LIGHT", "en")).toBe("Light");
-      expect(getCategoryLabel("COVER", "en")).toBe("Cover");
-      expect(getCategoryLabel("VALVE", "en")).toBe("Valve");
+  describe("getDomainLabel", () => {
+    it("should return English domain labels", () => {
+      expect(getDomainLabel("switch", "en")).toBe("Switch");
+      expect(getDomainLabel("light", "en")).toBe("Light");
+      expect(getDomainLabel("cover", "en")).toBe("Cover");
+      expect(getDomainLabel("valve", "en")).toBe("Valve");
     });
 
-    it("should return German category labels", () => {
-      expect(getCategoryLabel("SWITCH", "de")).toBe("Schalter");
-      expect(getCategoryLabel("LOCK", "de")).toBe("Schloss");
-      expect(getCategoryLabel("LIGHT", "de")).toBe("Licht");
-      expect(getCategoryLabel("COVER", "de")).toBe("Rollladen");
-      expect(getCategoryLabel("VALVE", "de")).toBe("Ventil");
+    it("should return German domain labels", () => {
+      expect(getDomainLabel("switch", "de")).toBe("Schalter");
+      expect(getDomainLabel("light", "de")).toBe("Licht");
+      expect(getDomainLabel("cover", "de")).toBe("Rollladen");
+      expect(getDomainLabel("valve", "de")).toBe("Ventil");
     });
 
-    it("should return empty string for undefined category", () => {
-      expect(getCategoryLabel(undefined, "en")).toBe("");
+    it("should return empty string for undefined domain", () => {
+      expect(getDomainLabel(undefined, "en")).toBe("");
     });
   });
 });
