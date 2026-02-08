@@ -20,9 +20,9 @@ import {
  */
 export function isEntryActive(entry: SimpleScheduleEntry): boolean {
   return Boolean(
-    entry.weekdays &&
+    Array.isArray(entry.weekdays) &&
     entry.weekdays.length > 0 &&
-    entry.target_channels &&
+    Array.isArray(entry.target_channels) &&
     entry.target_channels.length > 0,
   );
 }
@@ -281,6 +281,57 @@ export function formatAstroTime(astroType: AstroType, offsetMinutes: number): st
   } else {
     return `${baseLabel} ${offsetMinutes}m`;
   }
+}
+
+// --- Backend Serialization ---
+
+/**
+ * Strip null values and default optional fields from a schedule entry
+ * for the backend Pydantic model (extra="forbid").
+ */
+export function entryToBackend(entry: SimpleScheduleEntry): Record<string, unknown> {
+  const result: Record<string, unknown> = {
+    weekdays: entry.weekdays,
+    time: entry.time,
+    target_channels: entry.target_channels,
+    level: entry.level,
+  };
+
+  // Only include optional fields when they have non-default values
+  if (entry.condition !== "fixed_time") {
+    result.condition = entry.condition;
+  }
+  if (entry.astro_type !== null) {
+    result.astro_type = entry.astro_type;
+  }
+  if (entry.astro_offset_minutes !== 0) {
+    result.astro_offset_minutes = entry.astro_offset_minutes;
+  }
+  if (entry.level_2 !== null) {
+    result.level_2 = entry.level_2;
+  }
+  if (entry.duration !== null) {
+    result.duration = entry.duration;
+  }
+  if (entry.ramp_time !== null) {
+    result.ramp_time = entry.ramp_time;
+  }
+
+  return result;
+}
+
+/**
+ * Convert a full SimpleSchedule to the backend format,
+ * stripping null/default values from each entry.
+ */
+export function scheduleToBackend(
+  schedule: SimpleSchedule,
+): Record<string, Record<string, unknown>> {
+  const result: Record<string, Record<string, unknown>> = {};
+  for (const [key, entry] of Object.entries(schedule)) {
+    result[key] = entryToBackend(entry);
+  }
+  return result;
 }
 
 // --- Entity Validation ---

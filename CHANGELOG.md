@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `max_entries` limit enforcement when adding events
 - `schedule_domain` config option for manual domain override
 - Domain labels in localization (EN + DE)
-- Condition labels in localization (EN + DE)
+- Condition labels in localization (EN + DE)continue
 
 ### Changed
 

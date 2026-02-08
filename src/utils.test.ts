@@ -15,6 +15,8 @@ import {
   formatLevel,
   formatAstroTime,
   isValidScheduleEntity,
+  entryToBackend,
+  scheduleToBackend,
 } from "./utils";
 import { SimpleScheduleEntry, SimpleSchedule, ScheduleEntityAttributes } from "./types";
 
@@ -408,6 +410,165 @@ describe("Utils", () => {
         schedule_api_version: "v0.9",
       };
       expect(isValidScheduleEntity(attrs)).toBe(false);
+    });
+  });
+
+  describe("entryToBackend", () => {
+    it("should include only required fields for a minimal entry", () => {
+      const result = entryToBackend(makeEntry());
+      expect(result).toEqual({
+        weekdays: ["MONDAY"],
+        time: "12:00",
+        target_channels: ["1_1"],
+        level: 1,
+      });
+    });
+
+    it("should not include condition when fixed_time (default)", () => {
+      const result = entryToBackend(makeEntry({ condition: "fixed_time" }));
+      expect(result).not.toHaveProperty("condition");
+    });
+
+    it("should include condition when not fixed_time", () => {
+      const result = entryToBackend(makeEntry({ condition: "astro", astro_type: "sunrise" }));
+      expect(result.condition).toBe("astro");
+    });
+
+    it("should not include astro_type when null", () => {
+      const result = entryToBackend(makeEntry({ astro_type: null }));
+      expect(result).not.toHaveProperty("astro_type");
+    });
+
+    it("should include astro_type when set", () => {
+      const result = entryToBackend(makeEntry({ condition: "astro", astro_type: "sunset" }));
+      expect(result.astro_type).toBe("sunset");
+    });
+
+    it("should not include astro_offset_minutes when 0", () => {
+      const result = entryToBackend(makeEntry({ astro_offset_minutes: 0 }));
+      expect(result).not.toHaveProperty("astro_offset_minutes");
+    });
+
+    it("should include astro_offset_minutes when non-zero", () => {
+      const result = entryToBackend(
+        makeEntry({ condition: "astro", astro_type: "sunrise", astro_offset_minutes: 30 }),
+      );
+      expect(result.astro_offset_minutes).toBe(30);
+    });
+
+    it("should include negative astro_offset_minutes", () => {
+      const result = entryToBackend(
+        makeEntry({ condition: "astro", astro_type: "sunset", astro_offset_minutes: -45 }),
+      );
+      expect(result.astro_offset_minutes).toBe(-45);
+    });
+
+    it("should not include level_2 when null", () => {
+      const result = entryToBackend(makeEntry({ level_2: null }));
+      expect(result).not.toHaveProperty("level_2");
+    });
+
+    it("should include level_2 when set", () => {
+      const result = entryToBackend(makeEntry({ level: 0.5, level_2: 0.8 }));
+      expect(result.level_2).toBe(0.8);
+    });
+
+    it("should include level_2 when 0", () => {
+      const result = entryToBackend(makeEntry({ level_2: 0 }));
+      expect(result.level_2).toBe(0);
+    });
+
+    it("should not include duration when null", () => {
+      const result = entryToBackend(makeEntry({ duration: null }));
+      expect(result).not.toHaveProperty("duration");
+    });
+
+    it("should include duration when set", () => {
+      const result = entryToBackend(makeEntry({ duration: "5min" }));
+      expect(result.duration).toBe("5min");
+    });
+
+    it("should not include ramp_time when null", () => {
+      const result = entryToBackend(makeEntry({ ramp_time: null }));
+      expect(result).not.toHaveProperty("ramp_time");
+    });
+
+    it("should include ramp_time when set", () => {
+      const result = entryToBackend(makeEntry({ ramp_time: "10s" }));
+      expect(result.ramp_time).toBe("10s");
+    });
+
+    it("should include all optional fields when all are set", () => {
+      const result = entryToBackend(
+        makeEntry({
+          condition: "earliest",
+          astro_type: "sunrise",
+          astro_offset_minutes: -60,
+          level: 0.5,
+          level_2: 0.3,
+          duration: "4h",
+          ramp_time: "500ms",
+        }),
+      );
+      expect(result).toEqual({
+        weekdays: ["MONDAY"],
+        time: "12:00",
+        target_channels: ["1_1"],
+        level: 0.5,
+        condition: "earliest",
+        astro_type: "sunrise",
+        astro_offset_minutes: -60,
+        level_2: 0.3,
+        duration: "4h",
+        ramp_time: "500ms",
+      });
+    });
+  });
+
+  describe("scheduleToBackend", () => {
+    it("should convert all entries", () => {
+      const schedule: SimpleSchedule = {
+        "1": makeEntry({ time: "06:00", level: 1 }),
+        "2": makeEntry({ time: "22:00", level: 0, duration: "1min" }),
+      };
+
+      const result = scheduleToBackend(schedule);
+
+      expect(Object.keys(result)).toEqual(["1", "2"]);
+      expect(result["1"]).toEqual({
+        weekdays: ["MONDAY"],
+        time: "06:00",
+        target_channels: ["1_1"],
+        level: 1,
+      });
+      expect(result["2"]).toEqual({
+        weekdays: ["MONDAY"],
+        time: "22:00",
+        target_channels: ["1_1"],
+        level: 0,
+        duration: "1min",
+      });
+    });
+
+    it("should handle empty schedule", () => {
+      const result = scheduleToBackend({});
+      expect(result).toEqual({});
+    });
+
+    it("should strip null values from all entries", () => {
+      const schedule: SimpleSchedule = {
+        "1": makeEntry(),
+        "2": makeEntry(),
+      };
+
+      const result = scheduleToBackend(schedule);
+
+      for (const entry of Object.values(result)) {
+        expect(entry).not.toHaveProperty("astro_type");
+        expect(entry).not.toHaveProperty("level_2");
+        expect(entry).not.toHaveProperty("duration");
+        expect(entry).not.toHaveProperty("ramp_time");
+      }
     });
   });
 });

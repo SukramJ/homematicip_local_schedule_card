@@ -88,6 +88,13 @@ export interface SimpleScheduleEntry {
 export type SimpleSchedule = Record<string, SimpleScheduleEntry>;
 
 /**
+ * Schedule data wrapper as returned by entity attribute
+ */
+export interface ScheduleData {
+  entries: SimpleSchedule;
+}
+
+/**
  * UI extension for schedule entries
  */
 export interface SimpleScheduleEntryUI extends SimpleScheduleEntry {
@@ -152,7 +159,7 @@ export type DurationUnit = (typeof DURATION_UNITS)[number];
  * Entity attributes (WeekProfileSensor)
  */
 export interface ScheduleEntityAttributes {
-  schedule_data?: SimpleSchedule;
+  schedule_data?: ScheduleData;
   schedule_api_version?: string; // "v1.0"
   schedule_domain?: ScheduleDomain; // "switch", "light", "cover", "valve"
   max_entries?: number; // e.g., 24

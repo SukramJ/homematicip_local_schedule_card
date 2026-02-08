@@ -4,18 +4,25 @@ import resolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
 import json from "@rollup/plugin-json";
 import replace from "@rollup/plugin-replace";
-import { copyFileSync } from "fs";
+import { copyFileSync, mkdirSync, existsSync } from "fs";
 
-// Plugin to copy file to root after build (for HACS)
+const HA_WWW_DIR =
+  "../homematicip_local/config/www/community/homematicip_local_schedule_card";
+
+// Plugin to copy file to root after build (for HACS) and to local HA config
 function copyToRoot() {
   return {
     name: "copy-to-root",
     writeBundle() {
-      copyFileSync(
-        "dist/homematicip-local-schedule-card.js",
-        "homematicip-local-schedule-card.js"
-      );
+      const src = "dist/homematicip-local-schedule-card.js";
+      copyFileSync(src, "homematicip-local-schedule-card.js");
       console.log("✓ Copied to root for HACS");
+
+      if (!existsSync(HA_WWW_DIR)) {
+        mkdirSync(HA_WWW_DIR, { recursive: true });
+      }
+      copyFileSync(src, `${HA_WWW_DIR}/homematicip-local-schedule-card.js`);
+      console.log(`✓ Copied to ${HA_WWW_DIR}`);
     },
   };
 }
@@ -27,9 +34,7 @@ export default {
     format: "es",
     sourcemap: false,
   },
-  treeshake: {
-    moduleSideEffects: false,
-  },
+  treeshake: true,
   plugins: [
     replace({
       preventAssignment: true,
