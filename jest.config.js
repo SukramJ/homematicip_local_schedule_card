@@ -9,6 +9,7 @@ module.exports = {
     "!src/**/*.test.ts",
     "!src/**/__tests__/**",
     "!src/homematicip-local-schedule-card.ts", // Exclude Lit component from coverage
+    "!src/editor.ts", // Exclude Lit editor component from coverage
   ],
   coverageThreshold: {
     global: {

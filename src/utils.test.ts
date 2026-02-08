@@ -1,100 +1,187 @@
 import {
-  weekdayBitsToNames,
-  weekdayNamesToBits,
-  weekdayBitsToBitwise,
-  bitwiseToWeekdayBits,
-  channelBitsToBitwise,
-  bitwiseToChannelBits,
+  isEntryActive,
+  scheduleToUIEntries,
+  createEmptyEntry,
+  parseDuration,
+  buildDuration,
+  formatDurationDisplay,
+  isValidDuration,
   formatTime,
   parseTime,
-  isEventActive,
-  eventToUI,
-  scheduleToUIEvents,
-  createEmptyEvent,
-  convertToBackendFormat,
-  convertFromBackendFormat,
-  calculateDuration,
-  formatDuration,
+  isValidTime,
+  isAstroCondition,
+  validateEntry,
+  getDeviceAddress,
   formatLevel,
   formatAstroTime,
-  validateEvent,
-  isLevelBoolean,
+  isValidScheduleEntity,
+  entryToBackend,
+  scheduleToBackend,
 } from "./utils";
-import {
-  WeekdayBit,
-  AstroType,
-  ScheduleCondition,
-  TimeBase,
-  ScheduleEvent,
-  ScheduleDict,
-} from "./types";
+import { SimpleScheduleEntry, SimpleSchedule, ScheduleEntityAttributes } from "./types";
+
+function makeEntry(overrides?: Partial<SimpleScheduleEntry>): SimpleScheduleEntry {
+  return {
+    weekdays: ["MONDAY"],
+    time: "12:00",
+    condition: "fixed_time",
+    astro_type: null,
+    astro_offset_minutes: 0,
+    target_channels: ["1_1"],
+    level: 1,
+    level_2: null,
+    duration: null,
+    ramp_time: null,
+    ...overrides,
+  };
+}
 
 describe("Utils", () => {
-  describe("weekday conversion", () => {
-    it("should convert weekday bits to names", () => {
-      const bits = [WeekdayBit.MONDAY, WeekdayBit.WEDNESDAY, WeekdayBit.FRIDAY];
-      const names = weekdayBitsToNames(bits);
-      expect(names).toEqual(["MONDAY", "WEDNESDAY", "FRIDAY"]);
+  describe("isEntryActive", () => {
+    it("should return true for active entries", () => {
+      expect(isEntryActive(makeEntry())).toBe(true);
     });
 
-    it("should convert weekday names to bits", () => {
-      const names = ["MONDAY", "WEDNESDAY", "FRIDAY"] as const;
-      const bits = weekdayNamesToBits([...names]);
-      expect(bits).toEqual([WeekdayBit.MONDAY, WeekdayBit.WEDNESDAY, WeekdayBit.FRIDAY]);
+    it("should return false for entries without weekdays", () => {
+      expect(isEntryActive(makeEntry({ weekdays: [] }))).toBe(false);
     });
 
-    it("should convert weekday bits to bitwise integer", () => {
-      const allBits = [
-        WeekdayBit.SUNDAY,
-        WeekdayBit.MONDAY,
-        WeekdayBit.TUESDAY,
-        WeekdayBit.WEDNESDAY,
-        WeekdayBit.THURSDAY,
-        WeekdayBit.FRIDAY,
-        WeekdayBit.SATURDAY,
-      ];
-      expect(weekdayBitsToBitwise(allBits)).toBe(127); // 1+2+4+8+16+32+64
-
-      const mwf = [WeekdayBit.MONDAY, WeekdayBit.WEDNESDAY, WeekdayBit.FRIDAY];
-      expect(weekdayBitsToBitwise(mwf)).toBe(42); // 2+8+32
-    });
-
-    it("should convert bitwise integer to weekday bits", () => {
-      const bits = bitwiseToWeekdayBits(127);
-      expect(bits).toEqual([
-        WeekdayBit.SUNDAY,
-        WeekdayBit.MONDAY,
-        WeekdayBit.TUESDAY,
-        WeekdayBit.WEDNESDAY,
-        WeekdayBit.THURSDAY,
-        WeekdayBit.FRIDAY,
-        WeekdayBit.SATURDAY,
-      ]);
-
-      const mwfBits = bitwiseToWeekdayBits(42);
-      expect(mwfBits).toEqual([WeekdayBit.MONDAY, WeekdayBit.WEDNESDAY, WeekdayBit.FRIDAY]);
-    });
-
-    it("should handle empty weekday bits", () => {
-      expect(weekdayBitsToBitwise([])).toBe(0);
-      expect(bitwiseToWeekdayBits(0)).toEqual([]);
+    it("should return false for entries without target channels", () => {
+      expect(isEntryActive(makeEntry({ target_channels: [] }))).toBe(false);
     });
   });
 
-  describe("channel conversion", () => {
-    it("should convert channel bits to bitwise integer", () => {
-      const channels = [1, 2, 4];
-      expect(channelBitsToBitwise(channels)).toBe(7); // 1+2+4
+  describe("scheduleToUIEntries", () => {
+    it("should convert schedule to sorted UI entries", () => {
+      const schedule: SimpleSchedule = {
+        "2": makeEntry({ time: "18:00", level: 0 }),
+        "1": makeEntry({ time: "06:30", level: 1 }),
+      };
+
+      const entries = scheduleToUIEntries(schedule);
+
+      expect(entries).toHaveLength(2);
+      expect(entries[0].groupNo).toBe("1");
+      expect(entries[0].time).toBe("06:30");
+      expect(entries[1].groupNo).toBe("2");
+      expect(entries[1].time).toBe("18:00");
     });
 
-    it("should convert bitwise integer to channel bits", () => {
-      const bits = bitwiseToChannelBits(7);
-      expect(bits).toEqual([1, 2, 4]);
+    it("should mark active entries", () => {
+      const schedule: SimpleSchedule = {
+        "1": makeEntry(),
+        "2": makeEntry({ weekdays: [] }),
+      };
+
+      const entries = scheduleToUIEntries(schedule);
+      expect(entries[0].isActive).toBe(true);
+      expect(entries[1].isActive).toBe(false);
+    });
+  });
+
+  describe("createEmptyEntry", () => {
+    it("should create base empty entry", () => {
+      const entry = createEmptyEntry();
+      expect(entry.weekdays).toEqual([]);
+      expect(entry.time).toBe("00:00");
+      expect(entry.condition).toBe("fixed_time");
+      expect(entry.astro_type).toBeNull();
+      expect(entry.astro_offset_minutes).toBe(0);
+      expect(entry.target_channels).toEqual([]);
+      expect(entry.level).toBe(0);
+      expect(entry.level_2).toBeNull();
+      expect(entry.duration).toBeNull();
+      expect(entry.ramp_time).toBeNull();
     });
 
-    it("should handle empty channel bits", () => {
-      expect(channelBitsToBitwise([])).toBe(0);
-      expect(bitwiseToChannelBits(0)).toEqual([]);
+    it("should create cover entry with level_2", () => {
+      const entry = createEmptyEntry("cover");
+      expect(entry.level_2).toBe(0);
+    });
+
+    it("should create switch entry without level_2", () => {
+      const entry = createEmptyEntry("switch");
+      expect(entry.level_2).toBeNull();
+    });
+
+    it("should create light entry without level_2", () => {
+      const entry = createEmptyEntry("light");
+      expect(entry.level_2).toBeNull();
+    });
+
+    it("should create valve entry without level_2", () => {
+      const entry = createEmptyEntry("valve");
+      expect(entry.level_2).toBeNull();
+    });
+  });
+
+  describe("parseDuration", () => {
+    it("should parse milliseconds", () => {
+      expect(parseDuration("500ms")).toEqual({ value: 500, unit: "ms" });
+    });
+
+    it("should parse seconds", () => {
+      expect(parseDuration("10s")).toEqual({ value: 10, unit: "s" });
+    });
+
+    it("should parse minutes", () => {
+      expect(parseDuration("5min")).toEqual({ value: 5, unit: "min" });
+    });
+
+    it("should parse hours", () => {
+      expect(parseDuration("4h")).toEqual({ value: 4, unit: "h" });
+    });
+
+    it("should parse decimal values", () => {
+      expect(parseDuration("2.5h")).toEqual({ value: 2.5, unit: "h" });
+    });
+
+    it("should return null for invalid format", () => {
+      expect(parseDuration("invalid")).toBeNull();
+      expect(parseDuration("")).toBeNull();
+      expect(parseDuration("5x")).toBeNull();
+    });
+  });
+
+  describe("buildDuration", () => {
+    it("should build duration strings", () => {
+      expect(buildDuration(500, "ms")).toBe("500ms");
+      expect(buildDuration(10, "s")).toBe("10s");
+      expect(buildDuration(5, "min")).toBe("5min");
+      expect(buildDuration(4, "h")).toBe("4h");
+    });
+  });
+
+  describe("formatDurationDisplay", () => {
+    it("should return dash for null", () => {
+      expect(formatDurationDisplay(null)).toBe("-");
+    });
+
+    it("should format valid durations", () => {
+      expect(formatDurationDisplay("500ms")).toBe("500ms");
+      expect(formatDurationDisplay("10s")).toBe("10s");
+      expect(formatDurationDisplay("5min")).toBe("5min");
+      expect(formatDurationDisplay("4h")).toBe("4h");
+    });
+
+    it("should return raw string for invalid format", () => {
+      expect(formatDurationDisplay("invalid")).toBe("invalid");
+    });
+  });
+
+  describe("isValidDuration", () => {
+    it("should validate correct durations", () => {
+      expect(isValidDuration("500ms")).toBe(true);
+      expect(isValidDuration("10s")).toBe(true);
+      expect(isValidDuration("5min")).toBe(true);
+      expect(isValidDuration("4h")).toBe(true);
+      expect(isValidDuration("2.5h")).toBe(true);
+    });
+
+    it("should reject invalid durations", () => {
+      expect(isValidDuration("invalid")).toBe(false);
+      expect(isValidDuration("5x")).toBe(false);
+      expect(isValidDuration("")).toBe(false);
     });
   });
 
@@ -120,277 +207,146 @@ describe("Utils", () => {
     });
   });
 
-  describe("isEventActive", () => {
-    it("should return true for active events", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY],
-        TARGET_CHANNELS: [1],
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 0,
-        LEVEL: 1,
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
-      };
-      expect(isEventActive(event)).toBe(true);
+  describe("isValidTime", () => {
+    it("should return true for valid times", () => {
+      expect(isValidTime("00:00")).toBe(true);
+      expect(isValidTime("12:30")).toBe(true);
+      expect(isValidTime("23:59")).toBe(true);
     });
 
-    it("should return false for events without weekdays", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [],
-        TARGET_CHANNELS: [1],
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 0,
-        LEVEL: 1,
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
-      };
-      expect(isEventActive(event)).toBe(false);
-    });
-
-    it("should return false for events without target channels", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY],
-        TARGET_CHANNELS: [],
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 0,
-        LEVEL: 1,
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
-      };
-      expect(isEventActive(event)).toBe(false);
+    it("should return false for invalid times", () => {
+      expect(isValidTime("invalid")).toBe(false);
+      expect(isValidTime("25:00")).toBe(false);
+      expect(isValidTime("12:60")).toBe(false);
     });
   });
 
-  describe("eventToUI", () => {
-    it("should convert event to UI representation", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY, WeekdayBit.FRIDAY],
-        TARGET_CHANNELS: [1, 2],
-        FIXED_HOUR: 14,
-        FIXED_MINUTE: 30,
-        LEVEL: 1,
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
-      };
+  describe("isAstroCondition", () => {
+    it("should return false for fixed_time", () => {
+      expect(isAstroCondition("fixed_time")).toBe(false);
+    });
 
-      const uiEvent = eventToUI(1, event);
-
-      expect(uiEvent.groupNo).toBe(1);
-      expect(uiEvent.weekdayNames).toEqual(["MONDAY", "FRIDAY"]);
-      expect(uiEvent.timeString).toBe("14:30");
-      expect(uiEvent.isActive).toBe(true);
+    it("should return true for all other conditions", () => {
+      expect(isAstroCondition("astro")).toBe(true);
+      expect(isAstroCondition("fixed_if_before_astro")).toBe(true);
+      expect(isAstroCondition("astro_if_before_fixed")).toBe(true);
+      expect(isAstroCondition("fixed_if_after_astro")).toBe(true);
+      expect(isAstroCondition("astro_if_after_fixed")).toBe(true);
+      expect(isAstroCondition("earliest")).toBe(true);
+      expect(isAstroCondition("latest")).toBe(true);
     });
   });
 
-  describe("scheduleToUIEvents", () => {
-    it("should convert schedule to sorted UI events", () => {
-      const schedule: ScheduleDict = {
-        "2": {
-          WEEKDAY: [WeekdayBit.MONDAY],
-          TARGET_CHANNELS: [1],
-          FIXED_HOUR: 18,
-          FIXED_MINUTE: 0,
-          LEVEL: 0,
-          CONDITION: ScheduleCondition.FIXED_TIME,
-          ASTRO_TYPE: AstroType.SUNRISE,
-          ASTRO_OFFSET: 0,
-        },
-        "1": {
-          WEEKDAY: [WeekdayBit.MONDAY],
-          TARGET_CHANNELS: [1],
-          FIXED_HOUR: 6,
-          FIXED_MINUTE: 30,
-          LEVEL: 1,
-          CONDITION: ScheduleCondition.FIXED_TIME,
-          ASTRO_TYPE: AstroType.SUNRISE,
-          ASTRO_OFFSET: 0,
-        },
-      };
+  describe("validateEntry", () => {
+    it("should validate correct entry", () => {
+      const errors = validateEntry(makeEntry(), "switch");
+      expect(errors).toHaveLength(0);
+    });
 
-      const uiEvents = scheduleToUIEvents(schedule);
+    it("should detect invalid time", () => {
+      const errors = validateEntry(makeEntry({ time: "25:00" }));
+      expect(errors.some((e) => e.field === "time")).toBe(true);
+    });
 
-      expect(uiEvents).toHaveLength(2);
-      expect(uiEvents[0].groupNo).toBe(1); // Earlier time first
-      expect(uiEvents[0].timeString).toBe("06:30");
-      expect(uiEvents[1].groupNo).toBe(2);
-      expect(uiEvents[1].timeString).toBe("18:00");
+    it("should detect missing weekdays", () => {
+      const errors = validateEntry(makeEntry({ weekdays: [] }));
+      expect(errors.some((e) => e.field === "weekdays")).toBe(true);
+    });
+
+    it("should detect missing target channels", () => {
+      const errors = validateEntry(makeEntry({ target_channels: [] }));
+      expect(errors.some((e) => e.field === "target_channels")).toBe(true);
+    });
+
+    it("should detect invalid switch level", () => {
+      const errors = validateEntry(makeEntry({ level: 0.5 }), "switch");
+      expect(errors.some((e) => e.field === "level")).toBe(true);
+    });
+
+    it("should accept valid switch levels (0 and 1)", () => {
+      expect(validateEntry(makeEntry({ level: 0 }), "switch")).toHaveLength(0);
+      expect(validateEntry(makeEntry({ level: 1 }), "switch")).toHaveLength(0);
+    });
+
+    it("should detect level out of range for percentage domains", () => {
+      const errors = validateEntry(makeEntry({ level: 1.5 }), "light");
+      expect(errors.some((e) => e.field === "level")).toBe(true);
+    });
+
+    it("should detect invalid cover level_2", () => {
+      const errors = validateEntry(makeEntry({ level: 0.5, level_2: 1.5 }), "cover");
+      expect(errors.some((e) => e.field === "level_2")).toBe(true);
+    });
+
+    it("should detect invalid astro offset", () => {
+      const errors = validateEntry(
+        makeEntry({ condition: "astro", astro_type: "sunrise", astro_offset_minutes: 800 }),
+      );
+      expect(errors.some((e) => e.field === "astro_offset_minutes")).toBe(true);
+    });
+
+    it("should not validate astro offset for fixed_time", () => {
+      const errors = validateEntry(
+        makeEntry({ condition: "fixed_time", astro_offset_minutes: 800 }),
+      );
+      expect(errors.some((e) => e.field === "astro_offset_minutes")).toBe(false);
+    });
+
+    it("should detect invalid duration format", () => {
+      const errors = validateEntry(makeEntry({ duration: "invalid" }));
+      expect(errors.some((e) => e.field === "duration")).toBe(true);
+    });
+
+    it("should accept null duration", () => {
+      const errors = validateEntry(makeEntry({ duration: null }));
+      expect(errors.some((e) => e.field === "duration")).toBe(false);
+    });
+
+    it("should detect invalid ramp_time format", () => {
+      const errors = validateEntry(makeEntry({ ramp_time: "invalid" }));
+      expect(errors.some((e) => e.field === "ramp_time")).toBe(true);
     });
   });
 
-  describe("createEmptyEvent", () => {
-    it("should create empty SWITCH event", () => {
-      const event = createEmptyEvent("SWITCH");
-      expect(event.LEVEL).toBe(0);
-      expect(event.DURATION_BASE).toBe(TimeBase.MS_100);
-      expect(event.DURATION_FACTOR).toBe(0);
+  describe("getDeviceAddress", () => {
+    it("should extract device address from valid format", () => {
+      expect(getDeviceAddress("000C9709AEF157:1")).toBe("000C9709AEF157");
+      expect(getDeviceAddress("HED56782988:3")).toBe("HED56782988");
     });
 
-    it("should create empty LIGHT event", () => {
-      const event = createEmptyEvent("LIGHT");
-      expect(event.LEVEL).toBe(0.0);
-      expect(event.DURATION_BASE).toBe(TimeBase.MS_100);
-      expect(event.RAMP_TIME_BASE).toBe(TimeBase.MS_100);
-    });
-
-    it("should create empty COVER event", () => {
-      const event = createEmptyEvent("COVER");
-      expect(event.LEVEL).toBe(0.0);
-      expect(event.LEVEL_2).toBe(0.0);
-    });
-
-    it("should create empty VALVE event", () => {
-      const event = createEmptyEvent("VALVE");
-      expect(event.LEVEL).toBe(0.0);
-    });
-
-    it("should create empty LOCK event", () => {
-      const event = createEmptyEvent("LOCK");
-      expect(event.LEVEL).toBe(0);
-      expect(event.DURATION_BASE).toBeUndefined();
-      expect(event.RAMP_TIME_BASE).toBeUndefined();
-    });
-
-    it("should have base fields for all categories", () => {
-      const categories = ["SWITCH", "LIGHT", "COVER", "VALVE", "LOCK"] as const;
-      categories.forEach((category) => {
-        const event = createEmptyEvent(category);
-        expect(event.ASTRO_OFFSET).toBe(0);
-        expect(event.ASTRO_TYPE).toBe(AstroType.SUNRISE);
-        expect(event.CONDITION).toBe(ScheduleCondition.FIXED_TIME);
-        expect(event.FIXED_HOUR).toBe(0);
-        expect(event.FIXED_MINUTE).toBe(0);
-        expect(event.TARGET_CHANNELS).toEqual([]);
-        expect(event.WEEKDAY).toEqual([]);
-      });
-    });
-  });
-
-  describe("backend format conversion", () => {
-    it("should convert to backend format", () => {
-      const schedule: ScheduleDict = {
-        "1": {
-          WEEKDAY: [WeekdayBit.MONDAY],
-          TARGET_CHANNELS: [1],
-          FIXED_HOUR: 12,
-          FIXED_MINUTE: 0,
-          LEVEL: 1,
-          CONDITION: ScheduleCondition.FIXED_TIME,
-          ASTRO_TYPE: AstroType.SUNRISE,
-          ASTRO_OFFSET: 0,
-        },
-      };
-
-      const backend = convertToBackendFormat(schedule);
-      expect(backend[1]).toBeDefined();
-      expect(backend[1].LEVEL).toBe(1);
-    });
-
-    it("should convert from backend format", () => {
-      const backend = {
-        1: {
-          WEEKDAY: [WeekdayBit.MONDAY],
-          TARGET_CHANNELS: [1],
-          FIXED_HOUR: 12,
-          FIXED_MINUTE: 0,
-          LEVEL: 1,
-          CONDITION: ScheduleCondition.FIXED_TIME,
-          ASTRO_TYPE: AstroType.SUNRISE,
-          ASTRO_OFFSET: 0,
-        },
-      };
-
-      const schedule = convertFromBackendFormat(backend);
-      expect(schedule["1"]).toBeDefined();
-      expect(schedule["1"].LEVEL).toBe(1);
-    });
-  });
-
-  describe("duration calculations", () => {
-    it("should calculate duration correctly", () => {
-      expect(calculateDuration(TimeBase.MS_100, 10)).toBe(1000);
-      expect(calculateDuration(TimeBase.SEC_1, 5)).toBe(5000);
-      expect(calculateDuration(TimeBase.MIN_1, 2)).toBe(120000);
-      expect(calculateDuration(TimeBase.HOUR_1, 1)).toBe(3600000);
-    });
-
-    it("should format duration correctly", () => {
-      expect(formatDuration(TimeBase.MS_100, 5)).toBe("500ms");
-      expect(formatDuration(TimeBase.SEC_1, 5)).toBe("5.0s");
-      expect(formatDuration(TimeBase.MIN_1, 2)).toBe("2.0m");
-      expect(formatDuration(TimeBase.HOUR_1, 1)).toBe("1.0h");
-    });
-  });
-
-  describe("isLevelBoolean", () => {
-    it("should return true for SWITCH category", () => {
-      expect(isLevelBoolean(0, "SWITCH")).toBe(true);
-      expect(isLevelBoolean(1, "SWITCH")).toBe(true);
-      expect(isLevelBoolean(0.5, "SWITCH")).toBe(true); // Category determines type
-    });
-
-    it("should return true for LOCK category", () => {
-      expect(isLevelBoolean(0, "LOCK")).toBe(true);
-      expect(isLevelBoolean(1, "LOCK")).toBe(true);
-    });
-
-    it("should return false for LIGHT category", () => {
-      expect(isLevelBoolean(0, "LIGHT")).toBe(false);
-      expect(isLevelBoolean(0.5, "LIGHT")).toBe(false);
-      expect(isLevelBoolean(1, "LIGHT")).toBe(false);
-    });
-
-    it("should return false for COVER category", () => {
-      expect(isLevelBoolean(0, "COVER")).toBe(false);
-      expect(isLevelBoolean(0.5, "COVER")).toBe(false);
-      expect(isLevelBoolean(1, "COVER")).toBe(false);
-    });
-
-    it("should return false for VALVE category", () => {
-      expect(isLevelBoolean(0, "VALVE")).toBe(false);
-      expect(isLevelBoolean(0.5, "VALVE")).toBe(false);
-      expect(isLevelBoolean(1, "VALVE")).toBe(false);
-    });
-
-    it("should return false when no category is provided", () => {
-      expect(isLevelBoolean(0)).toBe(false);
-      expect(isLevelBoolean(1)).toBe(false);
+    it("should return undefined for invalid formats", () => {
+      expect(getDeviceAddress(undefined)).toBeUndefined();
+      expect(getDeviceAddress("")).toBeUndefined();
+      expect(getDeviceAddress("no-colon")).toBeUndefined();
+      expect(getDeviceAddress("a:b:c")).toBeUndefined();
     });
   });
 
   describe("formatLevel", () => {
-    it("should format SWITCH level as On/Off", () => {
-      expect(formatLevel(0, "SWITCH")).toBe("Off");
-      expect(formatLevel(1, "SWITCH")).toBe("On");
+    it("should format switch level as On/Off", () => {
+      expect(formatLevel(0, "switch")).toBe("Off");
+      expect(formatLevel(1, "switch")).toBe("On");
     });
 
-    it("should format LOCK level as On/Off", () => {
-      expect(formatLevel(0, "LOCK")).toBe("Off");
-      expect(formatLevel(1, "LOCK")).toBe("On");
+    it("should format light level as percentage", () => {
+      expect(formatLevel(0, "light")).toBe("0%");
+      expect(formatLevel(0.5, "light")).toBe("50%");
+      expect(formatLevel(1, "light")).toBe("100%");
     });
 
-    it("should format LIGHT level as percentage", () => {
-      expect(formatLevel(0, "LIGHT")).toBe("0%");
-      expect(formatLevel(0.5, "LIGHT")).toBe("50%");
-      expect(formatLevel(1, "LIGHT")).toBe("100%");
+    it("should format cover level as percentage", () => {
+      expect(formatLevel(0, "cover")).toBe("0%");
+      expect(formatLevel(0.5, "cover")).toBe("50%");
+      expect(formatLevel(1, "cover")).toBe("100%");
     });
 
-    it("should format COVER level as percentage", () => {
-      expect(formatLevel(0, "COVER")).toBe("0%");
-      expect(formatLevel(0.5, "COVER")).toBe("50%");
-      expect(formatLevel(1, "COVER")).toBe("100%");
+    it("should format valve level as percentage", () => {
+      expect(formatLevel(0, "valve")).toBe("0%");
+      expect(formatLevel(0.5, "valve")).toBe("50%");
+      expect(formatLevel(1, "valve")).toBe("100%");
     });
 
-    it("should format VALVE level as percentage", () => {
-      expect(formatLevel(0, "VALVE")).toBe("0%");
-      expect(formatLevel(0.5, "VALVE")).toBe("50%");
-      expect(formatLevel(1, "VALVE")).toBe("100%");
-    });
-
-    it("should format level as percentage when no category provided", () => {
+    it("should format level as percentage when no domain provided", () => {
       expect(formatLevel(0)).toBe("0%");
       expect(formatLevel(0.5)).toBe("50%");
       expect(formatLevel(1)).toBe("100%");
@@ -399,163 +355,220 @@ describe("Utils", () => {
 
   describe("formatAstroTime", () => {
     it("should format sunrise/sunset without offset", () => {
-      expect(formatAstroTime(AstroType.SUNRISE, 0)).toBe("Sunrise");
-      expect(formatAstroTime(AstroType.SUNSET, 0)).toBe("Sunset");
+      expect(formatAstroTime("sunrise", 0)).toBe("Sunrise");
+      expect(formatAstroTime("sunset", 0)).toBe("Sunset");
     });
 
     it("should format with positive offset", () => {
-      expect(formatAstroTime(AstroType.SUNRISE, 30)).toBe("Sunrise +30m");
+      expect(formatAstroTime("sunrise", 30)).toBe("Sunrise +30m");
     });
 
     it("should format with negative offset", () => {
-      expect(formatAstroTime(AstroType.SUNSET, -45)).toBe("Sunset -45m");
+      expect(formatAstroTime("sunset", -45)).toBe("Sunset -45m");
     });
   });
 
-  describe("validateEvent", () => {
-    it("should validate correct event", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY],
-        TARGET_CHANNELS: [1],
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 30,
-        LEVEL: 1,
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
+  describe("isValidScheduleEntity", () => {
+    it("should return true for valid schedule entity", () => {
+      const attrs: ScheduleEntityAttributes = {
+        schedule_type: "default",
+        schedule_api_version: "v1.0",
       };
-
-      const errors = validateEvent(event, "SWITCH");
-      expect(errors).toHaveLength(0);
+      expect(isValidScheduleEntity(attrs)).toBe(true);
     });
 
-    it("should detect invalid hour", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY],
-        TARGET_CHANNELS: [1],
-        FIXED_HOUR: 25,
-        FIXED_MINUTE: 0,
-        LEVEL: 1,
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
+    it("should return false when schedule_type is not default", () => {
+      const attrs: ScheduleEntityAttributes = {
+        schedule_type: "climate",
+        schedule_api_version: "v1.0",
       };
-
-      const errors = validateEvent(event);
-      expect(errors.some((e) => e.field === "FIXED_HOUR")).toBe(true);
+      expect(isValidScheduleEntity(attrs)).toBe(false);
     });
 
-    it("should detect missing weekdays", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [],
-        TARGET_CHANNELS: [1],
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 0,
-        LEVEL: 1,
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
+    it("should return false when schedule_api_version is missing", () => {
+      const attrs: ScheduleEntityAttributes = {
+        schedule_type: "default",
       };
-
-      const errors = validateEvent(event);
-      expect(errors.some((e) => e.field === "WEEKDAY")).toBe(true);
+      expect(isValidScheduleEntity(attrs)).toBe(false);
     });
 
-    it("should detect invalid SWITCH level", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY],
-        TARGET_CHANNELS: [1],
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 0,
-        LEVEL: 0.5, // Invalid for SWITCH
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
+    it("should return false when schedule_type is missing", () => {
+      const attrs: ScheduleEntityAttributes = {
+        schedule_api_version: "v1.0",
       };
-
-      const errors = validateEvent(event, "SWITCH");
-      expect(errors.some((e) => e.field === "LEVEL")).toBe(true);
+      expect(isValidScheduleEntity(attrs)).toBe(false);
     });
 
-    it("should detect invalid minute", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY],
-        TARGET_CHANNELS: [1],
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 60, // Invalid
-        LEVEL: 1,
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
-      };
-
-      const errors = validateEvent(event);
-      expect(errors.some((e) => e.field === "FIXED_MINUTE")).toBe(true);
+    it("should return false when both attributes are missing", () => {
+      const attrs: ScheduleEntityAttributes = {};
+      expect(isValidScheduleEntity(attrs)).toBe(false);
     });
 
-    it("should detect invalid astro offset", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY],
-        TARGET_CHANNELS: [1],
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 0,
-        LEVEL: 1,
-        CONDITION: ScheduleCondition.ASTRO,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 150, // Invalid: > 120
+    it("should return false for wrong api version", () => {
+      const attrs: ScheduleEntityAttributes = {
+        schedule_type: "default",
+        schedule_api_version: "v0.9",
       };
+      expect(isValidScheduleEntity(attrs)).toBe(false);
+    });
+  });
 
-      const errors = validateEvent(event);
-      expect(errors.some((e) => e.field === "ASTRO_OFFSET")).toBe(true);
+  describe("entryToBackend", () => {
+    it("should include only required fields for a minimal entry", () => {
+      const result = entryToBackend(makeEntry());
+      expect(result).toEqual({
+        weekdays: ["MONDAY"],
+        time: "12:00",
+        target_channels: ["1_1"],
+        level: 1,
+      });
     });
 
-    it("should detect invalid LIGHT level", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY],
-        TARGET_CHANNELS: [1],
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 0,
-        LEVEL: 1.5, // Invalid: > 1.0
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
-      };
-
-      const errors = validateEvent(event, "LIGHT");
-      expect(errors.some((e) => e.field === "LEVEL")).toBe(true);
+    it("should not include condition when fixed_time (default)", () => {
+      const result = entryToBackend(makeEntry({ condition: "fixed_time" }));
+      expect(result).not.toHaveProperty("condition");
     });
 
-    it("should detect invalid COVER LEVEL_2", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY],
-        TARGET_CHANNELS: [1],
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 0,
-        LEVEL: 0.5,
-        LEVEL_2: 1.5, // Invalid: > 1.0
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
-      };
-
-      const errors = validateEvent(event, "COVER");
-      expect(errors.some((e) => e.field === "LEVEL_2")).toBe(true);
+    it("should include condition when not fixed_time", () => {
+      const result = entryToBackend(makeEntry({ condition: "astro", astro_type: "sunrise" }));
+      expect(result.condition).toBe("astro");
     });
 
-    it("should detect missing target channels", () => {
-      const event: ScheduleEvent = {
-        WEEKDAY: [WeekdayBit.MONDAY],
-        TARGET_CHANNELS: [], // Empty
-        FIXED_HOUR: 12,
-        FIXED_MINUTE: 0,
-        LEVEL: 1,
-        CONDITION: ScheduleCondition.FIXED_TIME,
-        ASTRO_TYPE: AstroType.SUNRISE,
-        ASTRO_OFFSET: 0,
+    it("should not include astro_type when null", () => {
+      const result = entryToBackend(makeEntry({ astro_type: null }));
+      expect(result).not.toHaveProperty("astro_type");
+    });
+
+    it("should include astro_type when set", () => {
+      const result = entryToBackend(makeEntry({ condition: "astro", astro_type: "sunset" }));
+      expect(result.astro_type).toBe("sunset");
+    });
+
+    it("should not include astro_offset_minutes when 0", () => {
+      const result = entryToBackend(makeEntry({ astro_offset_minutes: 0 }));
+      expect(result).not.toHaveProperty("astro_offset_minutes");
+    });
+
+    it("should include astro_offset_minutes when non-zero", () => {
+      const result = entryToBackend(
+        makeEntry({ condition: "astro", astro_type: "sunrise", astro_offset_minutes: 30 }),
+      );
+      expect(result.astro_offset_minutes).toBe(30);
+    });
+
+    it("should include negative astro_offset_minutes", () => {
+      const result = entryToBackend(
+        makeEntry({ condition: "astro", astro_type: "sunset", astro_offset_minutes: -45 }),
+      );
+      expect(result.astro_offset_minutes).toBe(-45);
+    });
+
+    it("should not include level_2 when null", () => {
+      const result = entryToBackend(makeEntry({ level_2: null }));
+      expect(result).not.toHaveProperty("level_2");
+    });
+
+    it("should include level_2 when set", () => {
+      const result = entryToBackend(makeEntry({ level: 0.5, level_2: 0.8 }));
+      expect(result.level_2).toBe(0.8);
+    });
+
+    it("should include level_2 when 0", () => {
+      const result = entryToBackend(makeEntry({ level_2: 0 }));
+      expect(result.level_2).toBe(0);
+    });
+
+    it("should not include duration when null", () => {
+      const result = entryToBackend(makeEntry({ duration: null }));
+      expect(result).not.toHaveProperty("duration");
+    });
+
+    it("should include duration when set", () => {
+      const result = entryToBackend(makeEntry({ duration: "5min" }));
+      expect(result.duration).toBe("5min");
+    });
+
+    it("should not include ramp_time when null", () => {
+      const result = entryToBackend(makeEntry({ ramp_time: null }));
+      expect(result).not.toHaveProperty("ramp_time");
+    });
+
+    it("should include ramp_time when set", () => {
+      const result = entryToBackend(makeEntry({ ramp_time: "10s" }));
+      expect(result.ramp_time).toBe("10s");
+    });
+
+    it("should include all optional fields when all are set", () => {
+      const result = entryToBackend(
+        makeEntry({
+          condition: "earliest",
+          astro_type: "sunrise",
+          astro_offset_minutes: -60,
+          level: 0.5,
+          level_2: 0.3,
+          duration: "4h",
+          ramp_time: "500ms",
+        }),
+      );
+      expect(result).toEqual({
+        weekdays: ["MONDAY"],
+        time: "12:00",
+        target_channels: ["1_1"],
+        level: 0.5,
+        condition: "earliest",
+        astro_type: "sunrise",
+        astro_offset_minutes: -60,
+        level_2: 0.3,
+        duration: "4h",
+        ramp_time: "500ms",
+      });
+    });
+  });
+
+  describe("scheduleToBackend", () => {
+    it("should convert all entries", () => {
+      const schedule: SimpleSchedule = {
+        "1": makeEntry({ time: "06:00", level: 1 }),
+        "2": makeEntry({ time: "22:00", level: 0, duration: "1min" }),
       };
 
-      const errors = validateEvent(event);
-      expect(errors.some((e) => e.field === "TARGET_CHANNELS")).toBe(true);
+      const result = scheduleToBackend(schedule);
+
+      expect(Object.keys(result)).toEqual(["1", "2"]);
+      expect(result["1"]).toEqual({
+        weekdays: ["MONDAY"],
+        time: "06:00",
+        target_channels: ["1_1"],
+        level: 1,
+      });
+      expect(result["2"]).toEqual({
+        weekdays: ["MONDAY"],
+        time: "22:00",
+        target_channels: ["1_1"],
+        level: 0,
+        duration: "1min",
+      });
+    });
+
+    it("should handle empty schedule", () => {
+      const result = scheduleToBackend({});
+      expect(result).toEqual({});
+    });
+
+    it("should strip null values from all entries", () => {
+      const schedule: SimpleSchedule = {
+        "1": makeEntry(),
+        "2": makeEntry(),
+      };
+
+      const result = scheduleToBackend(schedule);
+
+      for (const entry of Object.values(result)) {
+        expect(entry).not.toHaveProperty("astro_type");
+        expect(entry).not.toHaveProperty("level_2");
+        expect(entry).not.toHaveProperty("duration");
+        expect(entry).not.toHaveProperty("ramp_time");
+      }
     });
   });
 });

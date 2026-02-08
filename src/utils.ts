@@ -1,117 +1,122 @@
 /**
  * Utility functions for Homematic(IP) Local Schedule Card
- * Based on aiohomematic DefaultWeekProfile implementation
+ * v1.0 Simple Schedule Format
  */
 
 import {
-  ScheduleEvent,
-  ScheduleDict,
-  BackendScheduleDict,
-  ScheduleEventUI,
-  WeekdayBit,
-  Weekday,
-  WEEKDAYS,
-  WEEKDAY_TO_BIT,
+  SimpleScheduleEntry,
+  SimpleSchedule,
+  SimpleScheduleEntryUI,
+  ScheduleDomain,
+  ScheduleEntityAttributes,
+  ConditionType,
   AstroType,
-  ScheduleCondition,
-  TimeBase,
-  DatapointCategory,
+  DOMAIN_FIELD_CONFIG,
+  DurationUnit,
 } from "./types";
 
 /**
- * Convert list of weekday bits to weekday names
- * Example: [2, 4, 32] -> ["MONDAY", "TUESDAY", "FRIDAY"]
+ * Check if a schedule entry is active (has weekdays and target channels)
  */
-export function weekdayBitsToNames(bits: WeekdayBit[]): Weekday[] {
-  const names: Weekday[] = [];
-  for (const weekday of WEEKDAYS) {
-    const bit = WEEKDAY_TO_BIT[weekday];
-    if (bits.includes(bit)) {
-      names.push(weekday);
-    }
-  }
-  return names;
+export function isEntryActive(entry: SimpleScheduleEntry): boolean {
+  return Boolean(
+    Array.isArray(entry.weekdays) &&
+    entry.weekdays.length > 0 &&
+    Array.isArray(entry.target_channels) &&
+    entry.target_channels.length > 0,
+  );
 }
 
 /**
- * Convert weekday names to list of bits
- * Example: ["MONDAY", "TUESDAY", "FRIDAY"] -> [2, 4, 32]
+ * Convert SimpleSchedule to sorted list of UI entries
  */
-export function weekdayNamesToBits(names: Weekday[]): WeekdayBit[] {
-  return names.map((name) => WEEKDAY_TO_BIT[name]);
+export function scheduleToUIEntries(schedule: SimpleSchedule): SimpleScheduleEntryUI[] {
+  const entries: SimpleScheduleEntryUI[] = [];
+
+  for (const [groupNo, entry] of Object.entries(schedule)) {
+    entries.push({
+      ...entry,
+      groupNo,
+      isActive: isEntryActive(entry),
+    });
+  }
+
+  // Sort by time string
+  entries.sort((a, b) => a.time.localeCompare(b.time));
+
+  return entries;
 }
 
 /**
- * Convert weekday bit array to bitwise integer
- * Example: [1, 2, 4, 8, 16, 32, 64] -> 127 (all days)
- * Example: [2, 8, 32] -> 42 (Monday, Wednesday, Friday)
+ * Create an empty/default schedule entry
  */
-export function weekdayBitsToBitwise(bits: WeekdayBit[]): number {
-  if (!bits || bits.length === 0) {
-    return 0;
+export function createEmptyEntry(domain?: ScheduleDomain): SimpleScheduleEntry {
+  const base: SimpleScheduleEntry = {
+    weekdays: [],
+    time: "00:00",
+    condition: "fixed_time",
+    astro_type: null,
+    astro_offset_minutes: 0,
+    target_channels: [],
+    level: 0,
+    level_2: null,
+    duration: null,
+    ramp_time: null,
+  };
+
+  if (domain === "cover") {
+    base.level_2 = 0;
   }
-  return bits.reduce((result, bit) => result | bit, 0);
+
+  return base;
+}
+
+// --- Duration String Handling ---
+
+const DURATION_REGEX = /^(\d+(?:\.\d+)?)\s*(ms|s|min|h)$/;
+
+/**
+ * Parse a duration string like "4h", "10s", "5min", "500ms"
+ */
+export function parseDuration(duration: string): { value: number; unit: DurationUnit } | null {
+  const match = duration.trim().match(DURATION_REGEX);
+  if (!match) return null;
+  return { value: parseFloat(match[1]), unit: match[2] as DurationUnit };
 }
 
 /**
- * Convert bitwise integer to weekday bit array
- * Example: 127 -> [1, 2, 4, 8, 16, 32, 64] (all days)
- * Example: 42 -> [2, 8, 32] (Monday, Wednesday, Friday)
+ * Build a duration string from value and unit
  */
-export function bitwiseToWeekdayBits(value: number): WeekdayBit[] {
-  if (value === 0) {
-    return [];
-  }
-
-  const bits: WeekdayBit[] = [];
-  const allBits = [
-    WeekdayBit.SUNDAY,
-    WeekdayBit.MONDAY,
-    WeekdayBit.TUESDAY,
-    WeekdayBit.WEDNESDAY,
-    WeekdayBit.THURSDAY,
-    WeekdayBit.FRIDAY,
-    WeekdayBit.SATURDAY,
-  ];
-
-  for (const bit of allBits) {
-    if (value & bit) {
-      bits.push(bit);
-    }
-  }
-
-  return bits;
+export function buildDuration(value: number, unit: DurationUnit): string {
+  return `${value}${unit}`;
 }
 
 /**
- * Convert channel bits to bitwise integer (same logic as weekday)
+ * Format duration for display
  */
-export function channelBitsToBitwise(bits: number[]): number {
-  if (!bits || bits.length === 0) {
-    return 0;
-  }
-  return bits.reduce((result, bit) => result | bit, 0);
+export function formatDurationDisplay(duration: string | null): string {
+  if (!duration) return "-";
+  const parsed = parseDuration(duration);
+  if (!parsed) return duration;
+
+  const unitLabels: Record<DurationUnit, string> = {
+    ms: "ms",
+    s: "s",
+    min: "min",
+    h: "h",
+  };
+
+  return `${parsed.value}${unitLabels[parsed.unit]}`;
 }
 
 /**
- * Convert bitwise integer to channel bit array
+ * Validate a duration string
  */
-export function bitwiseToChannelBits(value: number): number[] {
-  if (value === 0) {
-    return [];
-  }
-
-  const bits: number[] = [];
-  // Check all possible channel bits (1, 2, 4, 8, 16, 32, 64, 128, 256, ...)
-  for (let i = 0; i < 20; i++) {
-    const bit = 1 << i; // 2^i
-    if (value & bit) {
-      bits.push(bit);
-    }
-  }
-
-  return bits;
+export function isValidDuration(duration: string): boolean {
+  return DURATION_REGEX.test(duration.trim());
 }
+
+// --- Time Helpers ---
 
 /**
  * Format time from hour/minute to string (HH:MM)
@@ -139,265 +144,202 @@ export function parseTime(timeStr: string): { hour: number; minute: number } {
 }
 
 /**
- * Check if a schedule event is active (has weekdays and target channels)
+ * Validate a time string (HH:MM)
  */
-export function isEventActive(event: ScheduleEvent): boolean {
-  return Boolean(
-    event.WEEKDAY &&
-      event.WEEKDAY.length > 0 &&
-      event.TARGET_CHANNELS &&
-      event.TARGET_CHANNELS.length > 0,
-  );
-}
-
-/**
- * Convert ScheduleEvent to UI representation
- */
-export function eventToUI(groupNo: number, event: ScheduleEvent): ScheduleEventUI {
-  return {
-    ...event,
-    groupNo,
-    weekdayNames: weekdayBitsToNames(event.WEEKDAY),
-    timeString: formatTime(event.FIXED_HOUR, event.FIXED_MINUTE),
-    isActive: isEventActive(event),
-  };
-}
-
-/**
- * Convert ScheduleDict to list of UI events
- */
-export function scheduleToUIEvents(schedule: ScheduleDict): ScheduleEventUI[] {
-  const events: ScheduleEventUI[] = [];
-
-  for (const [groupNoStr, event] of Object.entries(schedule)) {
-    const groupNo = parseInt(groupNoStr, 10);
-    if (!isNaN(groupNo)) {
-      events.push(eventToUI(groupNo, event));
-    }
-  }
-
-  // Sort by time
-  events.sort((a, b) => {
-    const timeA = a.FIXED_HOUR * 60 + a.FIXED_MINUTE;
-    const timeB = b.FIXED_HOUR * 60 + b.FIXED_MINUTE;
-    return timeA - timeB;
-  });
-
-  return events;
-}
-
-/**
- * Create an empty/default schedule event
- * Based on aiohomematic create_empty_schedule_group
- */
-export function createEmptyEvent(category?: DatapointCategory): ScheduleEvent {
-  const baseEvent: ScheduleEvent = {
-    ASTRO_OFFSET: 0,
-    ASTRO_TYPE: AstroType.SUNRISE,
-    CONDITION: ScheduleCondition.FIXED_TIME,
-    FIXED_HOUR: 0,
-    FIXED_MINUTE: 0,
-    TARGET_CHANNELS: [],
-    WEEKDAY: [],
-    LEVEL: 0,
-  };
-
-  // Add category-specific fields based on DataPointCategory
-  if (category === "COVER") {
-    baseEvent.LEVEL = 0.0;
-    baseEvent.LEVEL_2 = 0.0;
-  } else if (category === "SWITCH") {
-    baseEvent.DURATION_BASE = TimeBase.MS_100;
-    baseEvent.DURATION_FACTOR = 0;
-    baseEvent.LEVEL = 0; // Binary level (0 or 1)
-  } else if (category === "LIGHT") {
-    baseEvent.DURATION_BASE = TimeBase.MS_100;
-    baseEvent.DURATION_FACTOR = 0;
-    baseEvent.RAMP_TIME_BASE = TimeBase.MS_100;
-    baseEvent.RAMP_TIME_FACTOR = 0;
-    baseEvent.LEVEL = 0.0; // Float level (0.0 - 1.0)
-  } else if (category === "VALVE") {
-    baseEvent.LEVEL = 0.0; // Float level (0.0 - 1.0)
-  } else if (category === "LOCK") {
-    baseEvent.LEVEL = 0; // Binary level (0 or 1)
-  }
-
-  return baseEvent;
-}
-
-/**
- * Convert ScheduleDict to backend format with integer keys
- */
-export function convertToBackendFormat(scheduleDict: ScheduleDict): BackendScheduleDict {
-  const backendDict: BackendScheduleDict = {};
-
-  for (const [groupNoStr, event] of Object.entries(scheduleDict)) {
-    const groupNo = parseInt(groupNoStr, 10);
-    if (!isNaN(groupNo)) {
-      backendDict[groupNo] = event;
-    }
-  }
-
-  return backendDict;
-}
-
-/**
- * Convert backend format to ScheduleDict with string keys
- */
-export function convertFromBackendFormat(backendDict: BackendScheduleDict): ScheduleDict {
-  const scheduleDict: ScheduleDict = {};
-
-  for (const [groupNo, event] of Object.entries(backendDict)) {
-    scheduleDict[groupNo.toString()] = event;
-  }
-
-  return scheduleDict;
-}
-
-/**
- * Calculate duration in milliseconds from base and factor
- */
-export function calculateDuration(base: TimeBase, factor: number): number {
-  const baseValues: Record<TimeBase, number> = {
-    [TimeBase.MS_100]: 100,
-    [TimeBase.SEC_1]: 1000,
-    [TimeBase.SEC_5]: 5000,
-    [TimeBase.SEC_10]: 10000,
-    [TimeBase.MIN_1]: 60000,
-    [TimeBase.MIN_5]: 300000,
-    [TimeBase.MIN_10]: 600000,
-    [TimeBase.HOUR_1]: 3600000,
-  };
-
-  return baseValues[base] * factor;
-}
-
-/**
- * Format duration for display
- */
-export function formatDuration(base: TimeBase, factor: number): string {
-  const durationMs = calculateDuration(base, factor);
-
-  if (durationMs < 1000) {
-    return `${durationMs}ms`;
-  } else if (durationMs < 60000) {
-    return `${(durationMs / 1000).toFixed(1)}s`;
-  } else if (durationMs < 3600000) {
-    return `${(durationMs / 60000).toFixed(1)}m`;
-  } else {
-    return `${(durationMs / 3600000).toFixed(1)}h`;
-  }
-}
-
-/**
- * Check if LEVEL should be interpreted as a boolean (0/1) rather than a percentage
- * Based on the datapoint category
- * - SWITCH and LOCK use boolean levels (0 = Off, 1 = On)
- * - LIGHT, COVER, and VALVE use float levels (0.0-1.0 as percentage)
- */
-export function isLevelBoolean(level: number, category?: DatapointCategory): boolean {
-  // Boolean categories: SWITCH and LOCK
-  if (category === "SWITCH" || category === "LOCK") {
+export function isValidTime(time: string): boolean {
+  try {
+    parseTime(time);
     return true;
-  }
-
-  // All other categories use percentage (float)
-  return false;
-}
-
-/**
- * Format level for display based on category and value type
- * - If LEVEL is 0 (integer): Boolean → "On" / "Off"
- * - If LEVEL is 0.0 (float): Percentage → "0%" to "100%"
- */
-export function formatLevel(level: number, category?: DatapointCategory): string {
-  // Check if should be displayed as boolean
-  if (isLevelBoolean(level, category)) {
-    return level === 0 ? "Off" : "On";
-  }
-
-  // Convert 0.0-1.0 to 0-100%
-  const percentage = level * 100;
-  return `${Math.round(percentage)}%`;
-}
-
-/**
- * Get display label for astro event with offset
- */
-export function formatAstroTime(astroType: AstroType, offset: number): string {
-  const baseLabel = astroType === AstroType.SUNRISE ? "Sunrise" : "Sunset";
-
-  if (offset === 0) {
-    return baseLabel;
-  } else if (offset > 0) {
-    return `${baseLabel} +${offset}m`;
-  } else {
-    return `${baseLabel} ${offset}m`;
+  } catch {
+    return false;
   }
 }
 
+// --- Condition Helpers ---
+
 /**
- * Validate schedule event
+ * Check if a condition type involves astro settings
  */
+export function isAstroCondition(condition: ConditionType): boolean {
+  return condition !== "fixed_time";
+}
+
+// --- Validation ---
+
 export interface ValidationError {
   field: string;
   message: string;
 }
 
-export function validateEvent(
-  event: ScheduleEvent,
-  category?: DatapointCategory,
+/**
+ * Validate a schedule entry
+ */
+export function validateEntry(
+  entry: SimpleScheduleEntry,
+  domain?: ScheduleDomain,
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
   // Validate time
-  if (event.FIXED_HOUR < 0 || event.FIXED_HOUR > 23) {
-    errors.push({ field: "FIXED_HOUR", message: "Hour must be between 0 and 23" });
-  }
-  if (event.FIXED_MINUTE < 0 || event.FIXED_MINUTE > 59) {
-    errors.push({ field: "FIXED_MINUTE", message: "Minute must be between 0 and 59" });
-  }
-
-  // Validate astro offset
-  if (event.CONDITION === ScheduleCondition.ASTRO) {
-    if (event.ASTRO_OFFSET < -120 || event.ASTRO_OFFSET > 120) {
-      errors.push({
-        field: "ASTRO_OFFSET",
-        message: "Astro offset must be between -120 and 120 minutes",
-      });
-    }
-  }
-
-  // Validate level
-  if (category === "SWITCH" || category === "LOCK") {
-    if (event.LEVEL !== 0 && event.LEVEL !== 1) {
-      errors.push({ field: "LEVEL", message: "Level must be 0 or 1 for switch/lock" });
-    }
-  } else {
-    if (event.LEVEL < 0 || event.LEVEL > 1) {
-      errors.push({ field: "LEVEL", message: "Level must be between 0.0 and 1.0" });
-    }
-  }
-
-  // Validate LEVEL_2 for cover
-  if (category === "COVER" && event.LEVEL_2 !== undefined) {
-    if (event.LEVEL_2 < 0 || event.LEVEL_2 > 1) {
-      errors.push({ field: "LEVEL_2", message: "Slat position must be between 0.0 and 1.0" });
-    }
+  if (!isValidTime(entry.time)) {
+    errors.push({ field: "time", message: "Time must be in HH:MM format (00:00-23:59)" });
   }
 
   // Validate weekdays
-  if (!event.WEEKDAY || event.WEEKDAY.length === 0) {
-    errors.push({ field: "WEEKDAY", message: "At least one weekday must be selected" });
+  if (!entry.weekdays || entry.weekdays.length === 0) {
+    errors.push({ field: "weekdays", message: "At least one weekday must be selected" });
   }
 
   // Validate target channels
-  if (!event.TARGET_CHANNELS || event.TARGET_CHANNELS.length === 0) {
+  if (!entry.target_channels || entry.target_channels.length === 0) {
     errors.push({
-      field: "TARGET_CHANNELS",
+      field: "target_channels",
       message: "At least one target channel must be selected",
     });
   }
 
+  // Validate level
+  const config = domain ? DOMAIN_FIELD_CONFIG[domain] : undefined;
+  if (config?.levelType === "binary") {
+    if (entry.level !== 0 && entry.level !== 1) {
+      errors.push({ field: "level", message: "Level must be 0 or 1 for switch" });
+    }
+  } else {
+    if (entry.level < 0 || entry.level > 1) {
+      errors.push({ field: "level", message: "Level must be between 0.0 and 1.0" });
+    }
+  }
+
+  // Validate level_2 for cover
+  if (domain === "cover" && entry.level_2 !== null) {
+    if (entry.level_2 < 0 || entry.level_2 > 1) {
+      errors.push({ field: "level_2", message: "Slat position must be between 0.0 and 1.0" });
+    }
+  }
+
+  // Validate astro offset
+  if (isAstroCondition(entry.condition)) {
+    if (entry.astro_offset_minutes < -720 || entry.astro_offset_minutes > 720) {
+      errors.push({
+        field: "astro_offset_minutes",
+        message: "Astro offset must be between -720 and 720 minutes",
+      });
+    }
+  }
+
+  // Validate duration
+  if (entry.duration !== null && !isValidDuration(entry.duration)) {
+    errors.push({ field: "duration", message: "Invalid duration format" });
+  }
+
+  // Validate ramp_time
+  if (entry.ramp_time !== null && !isValidDuration(entry.ramp_time)) {
+    errors.push({ field: "ramp_time", message: "Invalid ramp time format" });
+  }
+
   return errors;
+}
+
+// --- Device Address ---
+
+/**
+ * Extract device address from entity address attribute.
+ * Address format: "device_address:channel_no" (e.g., "000C9709AEF157:1")
+ * Returns just the device_address part.
+ */
+export function getDeviceAddress(address?: string): string | undefined {
+  if (!address) return undefined;
+  const parts = address.split(":");
+  if (parts.length !== 2) return undefined;
+  return parts[0];
+}
+
+// --- Level Formatting ---
+
+/**
+ * Format level for display based on domain
+ */
+export function formatLevel(level: number, domain?: ScheduleDomain): string {
+  const config = domain ? DOMAIN_FIELD_CONFIG[domain] : undefined;
+  if (config?.levelType === "binary") {
+    return level === 0 ? "Off" : "On";
+  }
+  const percentage = level * 100;
+  return `${Math.round(percentage)}%`;
+}
+
+/**
+ * Format astro time for display
+ */
+export function formatAstroTime(astroType: AstroType, offsetMinutes: number): string {
+  const baseLabel = astroType === "sunrise" ? "Sunrise" : "Sunset";
+
+  if (offsetMinutes === 0) {
+    return baseLabel;
+  } else if (offsetMinutes > 0) {
+    return `${baseLabel} +${offsetMinutes}m`;
+  } else {
+    return `${baseLabel} ${offsetMinutes}m`;
+  }
+}
+
+// --- Backend Serialization ---
+
+/**
+ * Strip null values and default optional fields from a schedule entry
+ * for the backend Pydantic model (extra="forbid").
+ */
+export function entryToBackend(entry: SimpleScheduleEntry): Record<string, unknown> {
+  const result: Record<string, unknown> = {
+    weekdays: entry.weekdays,
+    time: entry.time,
+    target_channels: entry.target_channels,
+    level: entry.level,
+  };
+
+  // Only include optional fields when they have non-default values
+  if (entry.condition !== "fixed_time") {
+    result.condition = entry.condition;
+  }
+  if (entry.astro_type !== null) {
+    result.astro_type = entry.astro_type;
+  }
+  if (entry.astro_offset_minutes !== 0) {
+    result.astro_offset_minutes = entry.astro_offset_minutes;
+  }
+  if (entry.level_2 !== null) {
+    result.level_2 = entry.level_2;
+  }
+  if (entry.duration !== null) {
+    result.duration = entry.duration;
+  }
+  if (entry.ramp_time !== null) {
+    result.ramp_time = entry.ramp_time;
+  }
+
+  return result;
+}
+
+/**
+ * Convert a full SimpleSchedule to the backend format,
+ * stripping null/default values from each entry.
+ */
+export function scheduleToBackend(
+  schedule: SimpleSchedule,
+): Record<string, Record<string, unknown>> {
+  const result: Record<string, Record<string, unknown>> = {};
+  for (const [key, entry] of Object.entries(schedule)) {
+    result[key] = entryToBackend(entry);
+  }
+  return result;
+}
+
+// --- Entity Validation ---
+
+/**
+ * Check if entity attributes indicate a valid v1.0 non-climate schedule entity.
+ * Requires schedule_type === "default" and schedule_api_version present.
+ */
+export function isValidScheduleEntity(attributes: ScheduleEntityAttributes): boolean {
+  return attributes.schedule_type === "default" && attributes.schedule_api_version === "v1.0";
 }

@@ -1,6 +1,6 @@
 /**
  * Type definitions for Homematic(IP) Local Schedule Card
- * Based on aiohomematic DefaultWeekProfile implementation
+ * v1.0 Simple Schedule Format
  */
 
 export interface HomematicScheduleCardConfig {
@@ -11,33 +11,19 @@ export interface HomematicScheduleCardConfig {
   editable?: boolean;
   hour_format?: "12" | "24";
   language?: "en" | "de";
-  time_step_minutes?: number;
+  schedule_domain?: ScheduleDomain;
 }
 
 // Alias for backwards compatibility
 export type ScheduleCardConfig = HomematicScheduleCardConfig;
 
 /**
- * Datapoint categories for different entity types
+ * Schedule domains (lowercase, matching Pydantic context)
  */
-export type DatapointCategory = "SWITCH" | "LOCK" | "LIGHT" | "COVER" | "VALVE";
+export type ScheduleDomain = "switch" | "light" | "cover" | "valve";
 
 /**
- * Weekday bit values (bitwise flags)
- * SUNDAY=1, MONDAY=2, TUESDAY=4, WEDNESDAY=8, THURSDAY=16, FRIDAY=32, SATURDAY=64
- */
-export enum WeekdayBit {
-  SUNDAY = 1,
-  MONDAY = 2,
-  TUESDAY = 4,
-  WEDNESDAY = 8,
-  THURSDAY = 16,
-  FRIDAY = 32,
-  SATURDAY = 64,
-}
-
-/**
- * Weekday names (for UI)
+ * Weekday names
  */
 export const WEEKDAYS = [
   "MONDAY",
@@ -51,137 +37,138 @@ export const WEEKDAYS = [
 
 export type Weekday = (typeof WEEKDAYS)[number];
 
-export const WEEKDAY_LABELS: Record<Weekday, string> = {
-  MONDAY: "Mo",
-  TUESDAY: "Tu",
-  WEDNESDAY: "We",
-  THURSDAY: "Th",
-  FRIDAY: "Fr",
-  SATURDAY: "Sa",
-  SUNDAY: "Su",
-};
-
-export const WEEKDAY_LABELS_DE: Record<Weekday, string> = {
-  MONDAY: "Mo",
-  TUESDAY: "Di",
-  WEDNESDAY: "Mi",
-  THURSDAY: "Do",
-  FRIDAY: "Fr",
-  SATURDAY: "Sa",
-  SUNDAY: "So",
-};
-
 /**
- * Map weekday names to bit values
+ * Condition types (from Pydantic model)
  */
-export const WEEKDAY_TO_BIT: Record<Weekday, WeekdayBit> = {
-  SUNDAY: WeekdayBit.SUNDAY,
-  MONDAY: WeekdayBit.MONDAY,
-  TUESDAY: WeekdayBit.TUESDAY,
-  WEDNESDAY: WeekdayBit.WEDNESDAY,
-  THURSDAY: WeekdayBit.THURSDAY,
-  FRIDAY: WeekdayBit.FRIDAY,
-  SATURDAY: WeekdayBit.SATURDAY,
-};
+export type ConditionType =
+  | "fixed_time"
+  | "astro"
+  | "fixed_if_before_astro"
+  | "astro_if_before_fixed"
+  | "fixed_if_after_astro"
+  | "astro_if_after_fixed"
+  | "earliest"
+  | "latest";
+
+export const CONDITION_TYPES: ConditionType[] = [
+  "fixed_time",
+  "astro",
+  "fixed_if_before_astro",
+  "astro_if_before_fixed",
+  "fixed_if_after_astro",
+  "astro_if_after_fixed",
+  "earliest",
+  "latest",
+];
 
 /**
  * Astro event types
  */
-export enum AstroType {
-  SUNRISE = 0,
-  SUNSET = 1,
+export type AstroType = "sunrise" | "sunset";
+
+/**
+ * SimpleScheduleEntry - central data type (Pydantic model)
+ */
+export interface SimpleScheduleEntry {
+  weekdays: Weekday[];
+  time: string; // "HH:MM"
+  condition: ConditionType;
+  astro_type: AstroType | null;
+  astro_offset_minutes: number; // -720 to 720
+  target_channels: string[]; // ["1_1", "2_1"]
+  level: number; // 0.0-1.0
+  level_2: number | null; // only COVER
+  duration: string | null; // "4h", "10s", "5min", "500ms"
+  ramp_time: string | null; // only LIGHT
 }
 
 /**
- * Schedule trigger conditions
+ * Schedule = Dict with string keys "1"-"24"
  */
-export enum ScheduleCondition {
-  FIXED_TIME = 0,
-  ASTRO = 1,
+export type SimpleSchedule = Record<string, SimpleScheduleEntry>;
+
+/**
+ * Schedule data wrapper as returned by entity attribute
+ */
+export interface ScheduleData {
+  entries: SimpleSchedule;
 }
 
 /**
- * Time base units for duration/ramp time
+ * UI extension for schedule entries
  */
-export enum TimeBase {
-  MS_100 = 0, // 100 milliseconds
-  SEC_1 = 1, // 1 second
-  SEC_5 = 2, // 5 seconds
-  SEC_10 = 3, // 10 seconds
-  MIN_1 = 4, // 1 minute
-  MIN_5 = 5, // 5 minutes
-  MIN_10 = 6, // 10 minutes
-  HOUR_1 = 7, // 1 hour
+export interface SimpleScheduleEntryUI extends SimpleScheduleEntry {
+  groupNo: string;
+  isActive: boolean;
 }
 
 /**
- * Time base labels for UI
+ * Target channel metadata (from WeekProfileSensor)
  */
-export const TIME_BASE_LABELS: Record<TimeBase, string> = {
-  [TimeBase.MS_100]: "100ms",
-  [TimeBase.SEC_1]: "1s",
-  [TimeBase.SEC_5]: "5s",
-  [TimeBase.SEC_10]: "10s",
-  [TimeBase.MIN_1]: "1m",
-  [TimeBase.MIN_5]: "5m",
-  [TimeBase.MIN_10]: "10m",
-  [TimeBase.HOUR_1]: "1h",
+export interface TargetChannelInfo {
+  channel_no: number;
+  channel_address: string;
+  name: string;
+  channel_type: string;
+}
+
+/**
+ * Domain-specific field configuration
+ */
+export interface DomainFieldConfig {
+  levelType: "binary" | "percentage";
+  hasLevel2: boolean;
+  hasDuration: boolean;
+  hasRampTime: boolean;
+}
+
+export const DOMAIN_FIELD_CONFIG: Record<ScheduleDomain, DomainFieldConfig> = {
+  switch: {
+    levelType: "binary",
+    hasLevel2: false,
+    hasDuration: true,
+    hasRampTime: false,
+  },
+  light: {
+    levelType: "percentage",
+    hasLevel2: false,
+    hasDuration: true,
+    hasRampTime: true,
+  },
+  cover: {
+    levelType: "percentage",
+    hasLevel2: true,
+    hasDuration: false,
+    hasRampTime: false,
+  },
+  valve: {
+    levelType: "percentage",
+    hasLevel2: false,
+    hasDuration: true,
+    hasRampTime: false,
+  },
 };
 
 /**
- * Schedule event definition
- * Each event defines when and how a device should be controlled
+ * Duration units
  */
-export interface ScheduleEvent {
-  // Timing (when to execute)
-  FIXED_HOUR: number; // 0-23
-  FIXED_MINUTE: number; // 0-59
-  WEEKDAY: WeekdayBit[]; // List of weekday bits [1, 2, 4, ...]
-
-  // Targets (what to control)
-  TARGET_CHANNELS: number[]; // List of channel bits [1, 2, 4, ...]
-
-  // Action (what to do)
-  LEVEL: number; // 0/1 for SWITCH/LOCK, 0.0-1.0 for LIGHT/COVER/VALVE
-  LEVEL_2?: number; // Optional, only for COVER (slat position)
-
-  // Condition (how to trigger)
-  CONDITION: ScheduleCondition; // FIXED_TIME or ASTRO
-  ASTRO_TYPE: AstroType; // SUNRISE or SUNSET (if CONDITION=ASTRO)
-  ASTRO_OFFSET: number; // Offset in minutes from astro event
-
-  // Duration (for SWITCH/LIGHT)
-  DURATION_BASE?: TimeBase;
-  DURATION_FACTOR?: number;
-
-  // Ramp time (only for LIGHT)
-  RAMP_TIME_BASE?: TimeBase;
-  RAMP_TIME_FACTOR?: number;
-}
+export const DURATION_UNITS = ["ms", "s", "min", "h"] as const;
+export type DurationUnit = (typeof DURATION_UNITS)[number];
 
 /**
- * Schedule dictionary with event groups
- * Keys are group numbers (1, 2, 3, ...)
- * Frontend uses string keys, backend uses integer keys
- */
-export interface ScheduleDict {
-  [groupNo: string]: ScheduleEvent;
-}
-
-/**
- * Backend representation with integer keys
- */
-export type BackendScheduleDict = Record<number, ScheduleEvent>;
-
-/**
- * Entity attributes from Home Assistant
+ * Entity attributes (WeekProfileSensor)
  */
 export interface ScheduleEntityAttributes {
-  schedule_data: ScheduleDict;
+  schedule_data?: ScheduleData;
+  schedule_api_version?: string; // "v1.0"
+  schedule_domain?: ScheduleDomain; // "switch", "light", "cover", "valve"
+  max_entries?: number; // e.g., 24
+  available_target_channels?: Record<string, TargetChannelInfo>;
+  schedule_type?: string; // "default" for non-climate schedules
+  schedule_channel_address?: string;
   friendly_name?: string;
-  datapoint_category?: DatapointCategory;
-  interface_id?: string; // e.g., "hmip_local-BidCos-RF", "hmip_local-HmIP-RF"
-  address?: string; // e.g., "000C9709AEF157:1" (device_address:channel_no)
+  address?: string; // "HED56782988:3"
+  interface_id?: string;
 }
 
 export interface HassEntity {
@@ -202,14 +189,4 @@ export interface HomeAssistant {
   callWS: (message: Record<string, unknown>) => Promise<unknown>;
   language?: string;
   locale?: { language: string };
-}
-
-/**
- * Helper type for UI representation of an event
- */
-export interface ScheduleEventUI extends ScheduleEvent {
-  groupNo: number;
-  weekdayNames: Weekday[]; // Decoded from WEEKDAY bits
-  timeString: string; // Formatted time (HH:MM)
-  isActive: boolean; // Has weekdays and channels
 }

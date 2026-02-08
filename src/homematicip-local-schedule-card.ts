@@ -1,3 +1,4 @@
+import "./editor";
 import { LitElement, html, css, PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
@@ -5,44 +6,50 @@ import {
   ScheduleCardConfig,
   HomeAssistant,
   ScheduleEntityAttributes,
-  ScheduleDict,
-  ScheduleEventUI,
-  ScheduleEvent,
-  DatapointCategory,
+  SimpleSchedule,
+  SimpleScheduleEntryUI,
+  SimpleScheduleEntry,
+  ScheduleDomain,
+  ConditionType,
+  AstroType,
   WEEKDAYS,
   Weekday,
-  WeekdayBit,
-  TimeBase,
+  CONDITION_TYPES,
+  DOMAIN_FIELD_CONFIG,
+  DURATION_UNITS,
+  DurationUnit,
+  TargetChannelInfo,
 } from "./types";
 import {
-  scheduleToUIEvents,
+  scheduleToUIEntries,
   formatLevel,
-  formatDuration,
-  createEmptyEvent,
-  validateEvent,
-  parseTime,
-  convertToBackendFormat,
-  isLevelBoolean,
+  formatDurationDisplay,
+  createEmptyEntry,
+  validateEntry,
+  getDeviceAddress,
+  isAstroCondition,
+  isValidScheduleEntity,
+  parseDuration,
+  buildDuration,
+  scheduleToBackend,
 } from "./utils";
 import { getTranslations, formatString, Translations } from "./localization";
-
-// HomematicIP Logo in Base64 format
-const HOMEMATIC_LOGO =
-  "data:image/png;base64,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";
 
 @customElement("homematicip-local-schedule-card")
 export class HomematicScheduleCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config?: ScheduleCardConfig;
-  @state() private _scheduleData?: ScheduleDict;
+  @state() private _scheduleData?: SimpleSchedule;
   @state() private _activeEntityId?: string;
-  @state() private _category?: DatapointCategory;
+  @state() private _domain?: ScheduleDomain;
   @state() private _isLoading: boolean = false;
   private _loadingTimeoutId?: number;
   @state() private _translations: Translations = getTranslations("en");
-  @state() private _editingEvent?: ScheduleEvent;
-  @state() private _editingGroupNo?: number;
+  @state() private _editingEntry?: SimpleScheduleEntry;
+  @state() private _editingGroupNo?: string;
   @state() private _showEditor: boolean = false;
+  @state() private _availableTargetChannels?: Record<string, TargetChannelInfo>;
+  @state() private _maxEntries?: number;
 
   public setConfig(config: ScheduleCardConfig): void {
     const entityIds: string[] = [];
@@ -74,14 +81,13 @@ export class HomematicScheduleCard extends LitElement {
     this._config = {
       editable: true,
       hour_format: "24",
-      time_step_minutes: 15,
       ...config,
       entity: fallbackEntity,
       entities: [...entityIds],
     };
 
     this._activeEntityId = nextActiveEntity;
-    this._editingEvent = undefined;
+    this._editingEntry = undefined;
     this._editingGroupNo = undefined;
     this._showEditor = false;
 
@@ -129,6 +135,7 @@ export class HomematicScheduleCard extends LitElement {
           }
         }
       } else if (this.hass && !oldHass) {
+        this._updateLanguage();
         this._updateScheduleData();
       }
     }
@@ -140,23 +147,52 @@ export class HomematicScheduleCard extends LitElement {
     return true;
   }
 
+  private _isValidScheduleEntity(entityId: string): boolean {
+    const entity = this.hass?.states?.[entityId];
+    if (!entity) return false;
+    const attributes = entity.attributes as unknown as ScheduleEntityAttributes;
+    return isValidScheduleEntity(attributes);
+  }
+
   private _updateScheduleData(): void {
     if (!this._activeEntityId || !this.hass?.states) {
       this._scheduleData = undefined;
-      this._category = undefined;
+      this._domain = undefined;
+      this._availableTargetChannels = undefined;
+      this._maxEntries = undefined;
       return;
     }
 
     const entity = this.hass.states[this._activeEntityId];
     if (!entity) {
       this._scheduleData = undefined;
-      this._category = undefined;
+      this._domain = undefined;
+      this._availableTargetChannels = undefined;
+      this._maxEntries = undefined;
       return;
     }
 
     const attributes = entity.attributes as unknown as ScheduleEntityAttributes;
-    this._scheduleData = attributes.schedule_data;
-    this._category = attributes.datapoint_category;
+
+    // Validate entity compatibility
+    if (!isValidScheduleEntity(attributes)) {
+      this._scheduleData = undefined;
+      this._domain = undefined;
+      this._availableTargetChannels = undefined;
+      this._maxEntries = undefined;
+      return;
+    }
+
+    this._scheduleData = attributes.schedule_data?.entries;
+    this._availableTargetChannels = attributes.available_target_channels;
+    this._maxEntries = attributes.max_entries;
+
+    // Domain from config override or entity attribute
+    if (this._config?.schedule_domain) {
+      this._domain = this._config.schedule_domain;
+    } else if (attributes.schedule_domain) {
+      this._domain = attributes.schedule_domain;
+    }
   }
 
   private _getEntityName(entityId: string): string {
@@ -170,46 +206,83 @@ export class HomematicScheduleCard extends LitElement {
     this._closeEditor();
   }
 
+  private _getDeviceAddress(entityId: string): string | undefined {
+    const entity = this.hass?.states?.[entityId];
+    if (!entity) return undefined;
+    const attributes = entity.attributes as unknown as ScheduleEntityAttributes;
+    return getDeviceAddress(attributes.address);
+  }
+
+  private _requireDeviceAddress(entityId: string): string {
+    const deviceAddress = this._getDeviceAddress(entityId);
+    if (!deviceAddress) {
+      throw new Error(`Cannot determine device address for entity ${entityId}`);
+    }
+    return deviceAddress;
+  }
+
   private _handleAddEvent(): void {
-    const newEvent = createEmptyEvent(this._category);
+    // Check max_entries limit
+    if (this._maxEntries && this._scheduleData) {
+      const currentEntries = Object.keys(this._scheduleData).length;
+      if (currentEntries >= this._maxEntries) {
+        alert(
+          formatString(this._translations.ui.maxEntriesReached, {
+            max: String(this._maxEntries),
+          }),
+        );
+        return;
+      }
+    }
+
+    const newEntry = createEmptyEntry(this._domain);
+
+    // Pre-select first available target channel if available
+    if (this._availableTargetChannels) {
+      const firstChannelKey = Object.keys(this._availableTargetChannels)[0];
+      if (firstChannelKey) {
+        newEntry.target_channels = [firstChannelKey];
+      }
+    }
+
     // Find next available group number
     const existingGroupNos = this._scheduleData
       ? Object.keys(this._scheduleData).map((k) => parseInt(k, 10))
       : [];
     const maxGroupNo = existingGroupNos.length > 0 ? Math.max(...existingGroupNos) : 0;
-    this._editingGroupNo = maxGroupNo + 1;
-    this._editingEvent = { ...newEvent };
+    this._editingGroupNo = String(maxGroupNo + 1);
+    this._editingEntry = { ...newEntry };
     this._showEditor = true;
   }
 
-  private _handleEditEvent(event: ScheduleEventUI): void {
-    this._editingGroupNo = event.groupNo;
-    this._editingEvent = { ...event };
+  private _handleEditEvent(entry: SimpleScheduleEntryUI): void {
+    this._editingGroupNo = entry.groupNo;
+    this._editingEntry = { ...entry };
     this._showEditor = true;
   }
 
-  private _handleDeleteEvent(event: ScheduleEventUI): void {
+  private _handleDeleteEvent(entry: SimpleScheduleEntryUI): void {
     if (!confirm(this._translations.ui.confirmDelete || "Delete this event?")) {
       return;
     }
 
     const updatedSchedule = { ...this._scheduleData };
-    delete updatedSchedule[event.groupNo.toString()];
+    delete updatedSchedule[entry.groupNo];
     this._saveSchedule(updatedSchedule);
   }
 
   private _closeEditor(): void {
     this._showEditor = false;
-    this._editingEvent = undefined;
+    this._editingEntry = undefined;
     this._editingGroupNo = undefined;
   }
 
   private _handleSaveEvent(): void {
-    if (!this._editingEvent || this._editingGroupNo === undefined) {
+    if (!this._editingEntry || this._editingGroupNo === undefined) {
       return;
     }
 
-    const errors = validateEvent(this._editingEvent, this._category);
+    const errors = validateEntry(this._editingEntry, this._domain);
     if (errors.length > 0) {
       alert(`Validation errors:\n${errors.map((e) => `- ${e.field}: ${e.message}`).join("\n")}`);
       return;
@@ -217,14 +290,14 @@ export class HomematicScheduleCard extends LitElement {
 
     const updatedSchedule = {
       ...this._scheduleData,
-      [this._editingGroupNo.toString()]: this._editingEvent,
+      [this._editingGroupNo]: this._editingEntry,
     };
 
     this._saveSchedule(updatedSchedule);
     this._closeEditor();
   }
 
-  private async _saveSchedule(scheduleDict: ScheduleDict): Promise<void> {
+  private async _saveSchedule(scheduleData: SimpleSchedule): Promise<void> {
     if (!this._activeEntityId || !this.hass) {
       return;
     }
@@ -233,17 +306,17 @@ export class HomematicScheduleCard extends LitElement {
     this._startLoading();
 
     try {
-      const backendFormat = convertToBackendFormat(scheduleDict);
+      const deviceAddress = this._requireDeviceAddress(entityId);
 
       await this.hass.callService("homematicip_local", "set_schedule", {
-        entity_id: entityId,
-        schedule: backendFormat,
+        device_address: deviceAddress,
+        schedule_data: { entries: scheduleToBackend(scheduleData) },
       });
 
       // Update local state optimistically
-      this._scheduleData = scheduleDict;
+      this._scheduleData = scheduleData;
 
-      // For BidCos-RF/Wired devices, schedule reload after delay (CONFIG_PENDING doesn't work)
+      // For BidCos-RF/Wired devices, schedule reload after delay
       if (this._needsManualReload(entityId)) {
         this._scheduleReloadDeviceConfig(entityId);
       }
@@ -282,9 +355,9 @@ export class HomematicScheduleCard extends LitElement {
     try {
       const entityName = this._getEntityName(this._activeEntityId);
       const exportData = {
-        version: "1.0",
+        version: "2.0",
         entity: this._activeEntityId,
-        category: this._category,
+        schedule_domain: this._domain,
         exportDate: new Date().toISOString(),
         schedule: this._scheduleData,
       };
@@ -327,15 +400,15 @@ export class HomematicScheduleCard extends LitElement {
           throw new Error(this._translations.errors.invalidImportData);
         }
 
-        // Check if category matches (optional warning)
-        if (data.category && data.category !== this._category) {
+        // Check if domain matches (optional warning)
+        if (data.schedule_domain && data.schedule_domain !== this._domain) {
           const proceed = confirm(
-            `Warning: The imported schedule is for a ${data.category} device, but the current entity is a ${this._category} device. Continue anyway?`,
+            `Warning: The imported schedule is for a ${data.schedule_domain} device, but the current entity is a ${this._domain} device. Continue anyway?`,
           );
           if (!proceed) return;
         }
 
-        await this._saveSchedule(data.schedule as ScheduleDict);
+        await this._saveSchedule(data.schedule as SimpleSchedule);
       } catch (error) {
         if (error instanceof SyntaxError) {
           alert(this._translations.errors.invalidImportFormat);
@@ -374,21 +447,11 @@ export class HomematicScheduleCard extends LitElement {
    */
   private _scheduleReloadDeviceConfig(entityId: string): void {
     if (!this.hass) return;
-    const entity = this.hass.states[entityId];
-    const address = entity?.attributes?.address as string | undefined;
-    if (!address) {
+    const deviceAddress = this._getDeviceAddress(entityId);
+    if (!deviceAddress) {
       console.warn("Cannot reload device config: address attribute missing");
       return;
     }
-
-    // Parse address format: "device_address:channel_no" (e.g., "000C9709AEF157:1")
-    const parts = address.split(":");
-    if (parts.length !== 2) {
-      console.warn("Cannot reload device config: invalid address format", address);
-      return;
-    }
-
-    const [deviceAddress] = parts;
 
     // Schedule reload after 5 seconds delay
     setTimeout(async () => {
@@ -403,27 +466,28 @@ export class HomematicScheduleCard extends LitElement {
     }, 5000);
   }
 
-  private _updateEditingEvent(updates: Partial<ScheduleEvent>): void {
-    if (!this._editingEvent) return;
-    this._editingEvent = { ...this._editingEvent, ...updates };
+  private _updateEditingEntry(updates: Partial<SimpleScheduleEntry>): void {
+    if (!this._editingEntry) return;
+    this._editingEntry = { ...this._editingEntry, ...updates };
     this.requestUpdate();
   }
 
-  private _groupEventsByWeekday(): Map<Weekday, ScheduleEventUI[]> {
-    const grouped = new Map<Weekday, ScheduleEventUI[]>();
+  private _groupEntriesByWeekday(): Map<Weekday, SimpleScheduleEntryUI[]> {
+    const grouped = new Map<Weekday, SimpleScheduleEntryUI[]>();
 
     if (!this._scheduleData) {
       return grouped;
     }
 
-    const uiEvents = scheduleToUIEvents(this._scheduleData);
+    const uiEntries = scheduleToUIEntries(this._scheduleData);
 
-    for (const event of uiEvents) {
-      for (const weekday of event.weekdayNames) {
+    for (const entry of uiEntries) {
+      const weekdays = Array.isArray(entry.weekdays) ? entry.weekdays : [];
+      for (const weekday of weekdays) {
         if (!grouped.has(weekday)) {
           grouped.set(weekday, []);
         }
-        grouped.get(weekday)!.push(event);
+        grouped.get(weekday)!.push(entry);
       }
     }
 
@@ -435,13 +499,22 @@ export class HomematicScheduleCard extends LitElement {
       return html``;
     }
 
+    // Only show entities that are valid schedule entities
+    const validEntities = this._config.entities.filter((entityId) =>
+      this._isValidScheduleEntity(entityId),
+    );
+
+    if (validEntities.length === 0) {
+      return html``;
+    }
+
     return html`
       <select
         class="entity-selector-dropdown"
         @change=${this._handleEntityChange}
         .value=${this._activeEntityId || ""}
       >
-        ${this._config.entities.map(
+        ${validEntities.map(
           (entityId) => html`
             <option value=${entityId} ?selected=${entityId === this._activeEntityId}>
               ${this._getEntityName(entityId)}
@@ -482,9 +555,9 @@ export class HomematicScheduleCard extends LitElement {
       return html`<div class="no-data">${this._translations.ui.loading}</div>`;
     }
 
-    const groupedEvents = this._groupEventsByWeekday();
+    const groupedEntries = this._groupEntriesByWeekday();
 
-    if (groupedEvents.size === 0) {
+    if (groupedEntries.size === 0) {
       return html`
         <div class="no-data">
           <p>No schedule events configured</p>
@@ -507,8 +580,8 @@ export class HomematicScheduleCard extends LitElement {
             </div>`
           : ""}
         ${WEEKDAYS.map((weekday) => {
-          const events = groupedEvents.get(weekday) || [];
-          if (events.length === 0) return html``;
+          const entries = groupedEntries.get(weekday) || [];
+          if (entries.length === 0) return html``;
 
           return html`
             <div class="weekday-section">
@@ -525,9 +598,9 @@ export class HomematicScheduleCard extends LitElement {
                   ${this._config?.editable ? html`<div class="col-actions"></div>` : ""}
                 </div>
                 ${repeat(
-                  events,
-                  (event) => event.groupNo,
-                  (event) => this._renderEvent(event),
+                  entries,
+                  (entry) => entry.groupNo,
+                  (entry) => this._renderEvent(entry),
                 )}
               </div>
             </div>
@@ -537,32 +610,29 @@ export class HomematicScheduleCard extends LitElement {
     `;
   }
 
-  private _renderEvent(event: ScheduleEventUI) {
-    const levelText = formatLevel(event.LEVEL, this._category);
-    const durationText =
-      event.DURATION_BASE !== undefined && event.DURATION_FACTOR !== undefined
-        ? formatDuration(event.DURATION_BASE, event.DURATION_FACTOR)
-        : "-";
+  private _renderEvent(entry: SimpleScheduleEntryUI) {
+    const levelText = formatLevel(entry.level, this._domain);
+    const durationText = formatDurationDisplay(entry.duration);
 
     return html`
-      <div class="event-row ${event.isActive ? "active" : "inactive"}">
-        <div class="col-time">${event.timeString}</div>
+      <div class="event-row ${entry.isActive ? "active" : "inactive"}">
+        <div class="col-time">${entry.time}</div>
         <div class="col-duration">${durationText}</div>
         <div class="col-level">
           ${levelText}
-          ${event.LEVEL_2 !== undefined
+          ${entry.level_2 !== null
             ? html`<span class="level-2"
-                >, ${this._translations.ui.slat}: ${Math.round(event.LEVEL_2 * 100)}%</span
+                >, ${this._translations.ui.slat}: ${Math.round(entry.level_2 * 100)}%</span
               >`
             : ""}
         </div>
         ${this._config?.editable
           ? html`<div class="col-actions">
-              <button @click=${() => this._handleEditEvent(event)} class="icon-button" title="Edit">
+              <button @click=${() => this._handleEditEvent(entry)} class="icon-button" title="Edit">
                 ✏️
               </button>
               <button
-                @click=${() => this._handleDeleteEvent(event)}
+                @click=${() => this._handleDeleteEvent(entry)}
                 class="icon-button"
                 title="Delete"
               >
@@ -575,11 +645,11 @@ export class HomematicScheduleCard extends LitElement {
   }
 
   private _renderEditor() {
-    if (!this._showEditor || !this._editingEvent) {
+    if (!this._showEditor || !this._editingEntry) {
       return html``;
     }
 
-    const isNewEvent = !this._scheduleData?.[this._editingGroupNo?.toString() || ""];
+    const isNewEvent = !this._scheduleData?.[this._editingGroupNo || ""];
 
     return html`
       <div class="editor-overlay" @click=${this._closeEditor}>
@@ -591,8 +661,10 @@ export class HomematicScheduleCard extends LitElement {
             <button @click=${this._closeEditor} class="close-button">✕</button>
           </div>
           <div class="editor-content">
-            ${this._renderTimeFields()} ${this._renderWeekdayFields()} ${this._renderLevelFields()}
-            ${this._renderDurationFields()} ${this._renderChannelFields()}
+            ${this._renderTimeFields()} ${this._renderConditionFields()}
+            ${this._renderWeekdayFields()} ${this._renderLevelFields()}
+            ${this._renderDurationFields()} ${this._renderRampTimeFields()}
+            ${this._renderChannelFields()}
           </div>
           <div class="editor-footer">
             <button @click=${this._closeEditor} class="button-secondary">
@@ -608,39 +680,104 @@ export class HomematicScheduleCard extends LitElement {
   }
 
   private _renderTimeFields() {
-    if (!this._editingEvent) return html``;
-
-    const timeString = `${String(this._editingEvent.FIXED_HOUR).padStart(2, "0")}:${String(this._editingEvent.FIXED_MINUTE).padStart(2, "0")}`;
+    if (!this._editingEntry) return html``;
 
     return html`
       <div class="form-group">
         <label>${this._translations.ui.time || "Time"}</label>
         <input
           type="time"
-          .value=${timeString}
+          .value=${this._editingEntry.time}
           @change=${(e: Event) => {
             const target = e.target as HTMLInputElement;
-            const parsed = parseTime(target.value);
-            this._updateEditingEvent({
-              FIXED_HOUR: parsed.hour,
-              FIXED_MINUTE: parsed.minute,
-            });
+            this._updateEditingEntry({ time: target.value });
           }}
         />
       </div>
     `;
   }
 
+  private _renderConditionFields() {
+    if (!this._editingEntry) return html``;
+
+    const showAstroFields = isAstroCondition(this._editingEntry.condition);
+
+    return html`
+      <div class="form-group">
+        <label>${this._translations.ui.condition || "Condition"}</label>
+        <select
+          .value=${this._editingEntry.condition}
+          @change=${(e: Event) => {
+            const value = (e.target as HTMLSelectElement).value as ConditionType;
+            const updates: Partial<SimpleScheduleEntry> = { condition: value };
+            if (value === "fixed_time") {
+              updates.astro_type = null;
+              updates.astro_offset_minutes = 0;
+            } else if (this._editingEntry!.astro_type === null) {
+              updates.astro_type = "sunrise";
+            }
+            this._updateEditingEntry(updates);
+          }}
+        >
+          ${CONDITION_TYPES.map(
+            (ct) => html`
+              <option value=${ct} ?selected=${ct === this._editingEntry!.condition}>
+                ${this._translations.conditions[ct] || ct}
+              </option>
+            `,
+          )}
+        </select>
+      </div>
+      ${showAstroFields
+        ? html`
+            <div class="form-group">
+              <label
+                >${this._translations.ui.astroSunrise}/${this._translations.ui.astroSunset}</label
+              >
+              <select
+                .value=${this._editingEntry.astro_type || "sunrise"}
+                @change=${(e: Event) => {
+                  const value = (e.target as HTMLSelectElement).value as AstroType;
+                  this._updateEditingEntry({ astro_type: value });
+                }}
+              >
+                <option value="sunrise" ?selected=${this._editingEntry.astro_type === "sunrise"}>
+                  ${this._translations.ui.astroSunrise}
+                </option>
+                <option value="sunset" ?selected=${this._editingEntry.astro_type === "sunset"}>
+                  ${this._translations.ui.astroSunset}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>${this._translations.ui.astroOffset}</label>
+              <input
+                type="number"
+                min="-720"
+                max="720"
+                .value=${String(this._editingEntry.astro_offset_minutes)}
+                @input=${(e: Event) => {
+                  const value = parseInt((e.target as HTMLInputElement).value, 10);
+                  if (!isNaN(value)) {
+                    this._updateEditingEntry({ astro_offset_minutes: value });
+                  }
+                }}
+              />
+            </div>
+          `
+        : ""}
+    `;
+  }
+
   private _renderWeekdayFields() {
-    if (!this._editingEvent) return html``;
+    if (!this._editingEntry) return html``;
 
     return html`
       <div class="form-group">
         <label>${this._translations.ui.weekdays || "Weekdays"}</label>
         <div class="weekday-checkboxes">
           ${WEEKDAYS.map((weekday) => {
-            const bit = WeekdayBit[weekday];
-            const isChecked = this._editingEvent!.WEEKDAY.includes(bit);
+            const isChecked = this._editingEntry!.weekdays.includes(weekday);
             return html`
               <label class="checkbox-label">
                 <input
@@ -648,14 +785,14 @@ export class HomematicScheduleCard extends LitElement {
                   .checked=${isChecked}
                   @change=${(e: Event) => {
                     const checked = (e.target as HTMLInputElement).checked;
-                    const currentWeekdays = [...this._editingEvent!.WEEKDAY];
-                    if (checked && !currentWeekdays.includes(bit)) {
-                      currentWeekdays.push(bit);
+                    const currentWeekdays = [...this._editingEntry!.weekdays];
+                    if (checked && !currentWeekdays.includes(weekday)) {
+                      currentWeekdays.push(weekday);
                     } else if (!checked) {
-                      const index = currentWeekdays.indexOf(bit);
+                      const index = currentWeekdays.indexOf(weekday);
                       if (index > -1) currentWeekdays.splice(index, 1);
                     }
-                    this._updateEditingEvent({ WEEKDAY: currentWeekdays });
+                    this._updateEditingEntry({ weekdays: currentWeekdays });
                   }}
                 />
                 ${this._translations.weekdays.short[
@@ -670,24 +807,25 @@ export class HomematicScheduleCard extends LitElement {
   }
 
   private _renderLevelFields() {
-    if (!this._editingEvent) return html``;
+    if (!this._editingEntry) return html``;
 
-    const isBooleanLevel = isLevelBoolean(this._editingEvent.LEVEL, this._category);
+    const config = this._domain ? DOMAIN_FIELD_CONFIG[this._domain] : undefined;
+    const isBinary = config?.levelType === "binary";
 
     return html`
       <div class="form-group">
         <label>${this._translations.ui.state || "State"}</label>
-        ${isBooleanLevel
+        ${isBinary
           ? html`
               <select
-                .value=${String(this._editingEvent.LEVEL)}
+                .value=${String(this._editingEntry.level)}
                 @change=${(e: Event) => {
                   const value = parseInt((e.target as HTMLSelectElement).value, 10);
-                  this._updateEditingEvent({ LEVEL: value });
+                  this._updateEditingEntry({ level: value });
                 }}
               >
-                <option value="0">Off</option>
-                <option value="1">On</option>
+                <option value="0">${this._translations.ui.levelOff}</option>
+                <option value="1">${this._translations.ui.levelOn}</option>
               </select>
             `
           : html`
@@ -695,16 +833,16 @@ export class HomematicScheduleCard extends LitElement {
                 type="range"
                 min="0"
                 max="100"
-                .value=${String(Math.round(this._editingEvent.LEVEL * 100))}
+                .value=${String(Math.round(this._editingEntry.level * 100))}
                 @input=${(e: Event) => {
                   const value = parseInt((e.target as HTMLInputElement).value, 10) / 100;
-                  this._updateEditingEvent({ LEVEL: value });
+                  this._updateEditingEntry({ level: value });
                 }}
               />
-              <span>${Math.round(this._editingEvent.LEVEL * 100)}%</span>
+              <span>${Math.round(this._editingEntry.level * 100)}%</span>
             `}
       </div>
-      ${this._category === "COVER"
+      ${config?.hasLevel2
         ? html`
             <div class="form-group">
               <label>${this._translations.ui.slat || "Slat Position"}</label>
@@ -712,13 +850,13 @@ export class HomematicScheduleCard extends LitElement {
                 type="range"
                 min="0"
                 max="100"
-                .value=${String(Math.round((this._editingEvent.LEVEL_2 || 0) * 100))}
+                .value=${String(Math.round((this._editingEntry.level_2 || 0) * 100))}
                 @input=${(e: Event) => {
                   const value = parseInt((e.target as HTMLInputElement).value, 10) / 100;
-                  this._updateEditingEvent({ LEVEL_2: value });
+                  this._updateEditingEntry({ level_2: value });
                 }}
               />
-              <span>${Math.round((this._editingEvent.LEVEL_2 || 0) * 100)}%</span>
+              <span>${Math.round((this._editingEntry.level_2 || 0) * 100)}%</span>
             </div>
           `
         : ""}
@@ -726,59 +864,148 @@ export class HomematicScheduleCard extends LitElement {
   }
 
   private _renderDurationFields() {
-    if (!this._editingEvent) return html``;
-    if (this._category !== "SWITCH" && this._category !== "LIGHT") return html``;
+    if (!this._editingEntry) return html``;
+    const config = this._domain ? DOMAIN_FIELD_CONFIG[this._domain] : undefined;
+    if (config && !config.hasDuration) return html``;
+
+    const parsed = this._editingEntry.duration ? parseDuration(this._editingEntry.duration) : null;
+    const durationValue = parsed?.value ?? 0;
+    const durationUnit: DurationUnit = parsed?.unit ?? "s";
 
     return html`
       <div class="form-group">
         <label>${this._translations.ui.duration || "Duration"}</label>
-        <input
-          type="number"
-          min="0"
-          .value=${String(this._editingEvent.DURATION_FACTOR || 0)}
-          @input=${(e: Event) => {
-            const value = parseInt((e.target as HTMLInputElement).value, 10);
-            this._updateEditingEvent({ DURATION_FACTOR: value });
-          }}
-        />
-        <select
-          .value=${String(this._editingEvent.DURATION_BASE || TimeBase.MS_100)}
-          @change=${(e: Event) => {
-            const value = parseInt((e.target as HTMLSelectElement).value, 10);
-            this._updateEditingEvent({ DURATION_BASE: value as TimeBase });
-          }}
-        >
-          <option value=${TimeBase.MS_100}>× 100ms</option>
-          <option value=${TimeBase.SEC_1}>× 1s</option>
-          <option value=${TimeBase.SEC_5}>× 5s</option>
-          <option value=${TimeBase.SEC_10}>× 10s</option>
-          <option value=${TimeBase.MIN_1}>× 1m</option>
-          <option value=${TimeBase.MIN_5}>× 5m</option>
-          <option value=${TimeBase.MIN_10}>× 10m</option>
-          <option value=${TimeBase.HOUR_1}>× 1h</option>
-        </select>
+        <div class="duration-row">
+          <input
+            type="number"
+            min="0"
+            .value=${String(durationValue)}
+            @input=${(e: Event) => {
+              const value = parseFloat((e.target as HTMLInputElement).value);
+              if (!isNaN(value) && value > 0) {
+                this._updateEditingEntry({ duration: buildDuration(value, durationUnit) });
+              } else {
+                this._updateEditingEntry({ duration: null });
+              }
+            }}
+          />
+          <select
+            .value=${durationUnit}
+            @change=${(e: Event) => {
+              const unit = (e.target as HTMLSelectElement).value as DurationUnit;
+              if (durationValue > 0) {
+                this._updateEditingEntry({ duration: buildDuration(durationValue, unit) });
+              }
+            }}
+          >
+            ${DURATION_UNITS.map(
+              (u) => html` <option value=${u} ?selected=${u === durationUnit}>${u}</option> `,
+            )}
+          </select>
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderRampTimeFields() {
+    if (!this._editingEntry) return html``;
+    const config = this._domain ? DOMAIN_FIELD_CONFIG[this._domain] : undefined;
+    if (config && !config.hasRampTime) return html``;
+
+    const parsed = this._editingEntry.ramp_time
+      ? parseDuration(this._editingEntry.ramp_time)
+      : null;
+    const rampValue = parsed?.value ?? 0;
+    const rampUnit: DurationUnit = parsed?.unit ?? "s";
+
+    return html`
+      <div class="form-group">
+        <label>${this._translations.ui.rampTime || "Ramp Time"}</label>
+        <div class="duration-row">
+          <input
+            type="number"
+            min="0"
+            .value=${String(rampValue)}
+            @input=${(e: Event) => {
+              const value = parseFloat((e.target as HTMLInputElement).value);
+              if (!isNaN(value) && value > 0) {
+                this._updateEditingEntry({ ramp_time: buildDuration(value, rampUnit) });
+              } else {
+                this._updateEditingEntry({ ramp_time: null });
+              }
+            }}
+          />
+          <select
+            .value=${rampUnit}
+            @change=${(e: Event) => {
+              const unit = (e.target as HTMLSelectElement).value as DurationUnit;
+              if (rampValue > 0) {
+                this._updateEditingEntry({ ramp_time: buildDuration(rampValue, unit) });
+              }
+            }}
+          >
+            ${DURATION_UNITS.map(
+              (u) => html` <option value=${u} ?selected=${u === rampUnit}>${u}</option> `,
+            )}
+          </select>
+        </div>
       </div>
     `;
   }
 
   private _renderChannelFields() {
-    if (!this._editingEvent) return html``;
+    if (!this._editingEntry) return html``;
 
+    // If available_target_channels metadata is present, render checkboxes
+    if (this._availableTargetChannels && Object.keys(this._availableTargetChannels).length > 0) {
+      return html`
+        <div class="form-group">
+          <label>${this._translations.ui.channels || "Target Channels"}</label>
+          <div class="channel-checkboxes">
+            ${Object.entries(this._availableTargetChannels).map(([key, info]) => {
+              const isChecked = this._editingEntry!.target_channels.includes(key);
+              return html`
+                <label class="checkbox-label">
+                  <input
+                    type="checkbox"
+                    .checked=${isChecked}
+                    @change=${(e: Event) => {
+                      const checked = (e.target as HTMLInputElement).checked;
+                      const channels = [...this._editingEntry!.target_channels];
+                      if (checked && !channels.includes(key)) {
+                        channels.push(key);
+                      } else if (!checked) {
+                        const index = channels.indexOf(key);
+                        if (index > -1) channels.splice(index, 1);
+                      }
+                      this._updateEditingEntry({ target_channels: channels });
+                    }}
+                  />
+                  ${info.name || key}
+                </label>
+              `;
+            })}
+          </div>
+        </div>
+      `;
+    }
+
+    // Fallback: text input
     return html`
       <div class="form-group">
         <label>${this._translations.ui.channels || "Target Channels"}</label>
         <input
           type="text"
-          .value=${this._editingEvent.TARGET_CHANNELS.join(", ")}
+          .value=${this._editingEntry.target_channels.join(", ")}
           @input=${(e: Event) => {
             const value = (e.target as HTMLInputElement).value;
             const channels = value
               .split(",")
-              .map((s) => parseInt(s.trim(), 10))
-              .filter((n) => !isNaN(n));
-            this._updateEditingEvent({ TARGET_CHANNELS: channels });
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0);
+            this._updateEditingEntry({ target_channels: channels });
           }}
-          placeholder="1, 2, 4, 8"
+          placeholder="1_1, 2_1"
         />
       </div>
     `;
@@ -800,7 +1027,6 @@ export class HomematicScheduleCard extends LitElement {
         <ha-card>
           <div class="card-header">
             <div class="header-left">
-              <img src="${HOMEMATIC_LOGO}" alt="HomematicIP" class="card-logo" />
               <div class="card-title">${cardTitle}</div>
             </div>
           </div>
@@ -815,11 +1041,31 @@ export class HomematicScheduleCard extends LitElement {
       `;
     }
 
+    // Check if entity is a compatible schedule entity
+    if (!this._isValidScheduleEntity(this._activeEntityId!)) {
+      return html`
+        <ha-card>
+          <div class="card-header">
+            <div class="header-left">
+              <div class="card-title">${cardTitle}</div>
+            </div>
+          </div>
+          ${this._renderHeaderControls()}
+          <div class="card-content">
+            <div class="error">
+              ${formatString(this._translations.errors.incompatibleEntity, {
+                entity: this._activeEntityId!,
+              })}
+            </div>
+          </div>
+        </ha-card>
+      `;
+    }
+
     return html`
       <ha-card>
         <div class="card-header">
           <div class="header-left">
-            <img src="${HOMEMATIC_LOGO}" alt="HomematicIP" class="card-logo" />
             <div class="card-title">${cardTitle}</div>
           </div>
         </div>
@@ -1166,7 +1412,33 @@ export class HomematicScheduleCard extends LitElement {
         width: 100%;
       }
 
-      .weekday-checkboxes {
+      .duration-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .duration-row input[type="number"] {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid var(--divider-color);
+        border-radius: 4px;
+        background-color: var(--card-background-color);
+        color: var(--primary-text-color);
+        font-size: 14px;
+      }
+
+      .duration-row select {
+        padding: 8px;
+        border: 1px solid var(--divider-color);
+        border-radius: 4px;
+        background-color: var(--card-background-color);
+        color: var(--primary-text-color);
+        font-size: 14px;
+      }
+
+      .weekday-checkboxes,
+      .channel-checkboxes {
         display: flex;
         flex-wrap: wrap;
         gap: 12px;
@@ -1299,13 +1571,6 @@ export class HomematicScheduleCard extends LitElement {
         to {
           transform: rotate(360deg);
         }
-      }
-
-      .card-logo {
-        height: 40px;
-        width: auto;
-        margin-right: 12px;
-        object-fit: contain;
       }
 
       .error {
@@ -1454,6 +1719,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "homematicip-local-schedule-card",
   name: "HomematicIP Local Scheduler Card",
-  description:
-    "A custom card for Homematic(IP) Local schedules (switch, valve, cover, light, lock)",
+  description: "A custom card for Homematic(IP) Local schedules (switch, valve, cover, light)",
 });
