@@ -1,15 +1,17 @@
 # HomematicIP Local Schedule Card
 
-A custom Lovelace card for Home Assistant to display and edit Homematic(IP) Local schedules for switches, lights, covers, valves, and locks.
+![HomematicIP Local Schedule Card](logo.png)
+
+A custom Lovelace card for Home Assistant to display and edit Homematic(IP) Local schedules for switches, lights, covers, and valves.
 
 ## Features
 
-- 📅 **Event-Based Scheduling**: Manage individual schedule events with precise control
-- 🎯 **Multi-Device Support**: Works with switches, lights, covers, valves, and locks
-- ⏰ **Flexible Timing**: Fixed time or astronomical events (sunrise/sunset)
-- 🎨 **Category-Specific UI**: Adapted interface for different device types
-- 🌍 **Integration Ready**: Seamlessly works with HomematicIP Local integration
-- 🌐 **Bilingual**: English and German translations
+- 📅 Event-based scheduling with precise control
+- 🎯 Multi-device support: switches, lights, covers, valves
+- ⏰ Fixed time or astronomical events (sunrise/sunset) with 8 condition types
+- 🎨 Category-specific UI for different device types
+- 🌍 Compatible with HomematicIP Local integration v2.0.0+
+- 🌐 Bilingual: English and German
 
 ## Installation via HACS
 
@@ -43,8 +45,6 @@ entity: switch.living_room
 name: Living Room Schedule
 editable: true
 hour_format: "24"
-language: "en"
-time_step_minutes: 15
 ```
 
 ### Options
@@ -63,28 +63,7 @@ time_step_minutes: 15
 
 - Home Assistant 2023.1 or newer
 - HomematicIP Local integration installed and configured
-- Homematic device with schedule support (SWITCH, LIGHT, COVER, VALVE, LOCK)
-
-## Supported Device Types
-
-- **SWITCH**: On/Off devices
-- **LOCK**: Door locks
-- **LIGHT**: Lights with dimming and ramp time support
-- **COVER**: Blinds/shutters with position and slat control
-- **VALVE**: Heating valves
-
-## Usage
-
-### Viewing Schedules
-
-The card displays schedule events with time, weekdays, and action (level/position/state).
-
-### Editing Schedules
-
-1. Click on an event to edit it
-2. Modify time, weekdays, and action parameters
-3. Add or remove schedule events
-4. Click "Save" to apply changes to your device
+- Homematic device with schedule support (switch, light, cover, valve)
 
 ## Support
 
