@@ -4,6 +4,8 @@
 
 A custom Lovelace card for Home Assistant to display and edit Homematic(IP) Local schedules for switches, lights, covers, and valves.
 
+![HomematicIP Local Climate Card](logo.png)
+
 ## Features
 
 - 📅 **Event-Based Scheduling**: Manage individual schedule events with precise control
