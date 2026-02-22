@@ -26,11 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Error message for incompatible entities (EN + DE)
 - `max_entries` limit enforcement when adding events
 - `schedule_domain` config option for manual domain override
+- Automatic domain detection from `schedule_domain` entity attribute (fallback to config option)
 - Domain labels in localization (EN + DE)
-- Condition labels in localization (EN + DE)continue
+- Condition labels in localization (EN + DE)
 
 ### Changed
 
+- Extracted schedule list and event editor into shared `@hmip/schedule-ui` package for consistent UX across card and config panel
+  - `<hmip-device-schedule-list>`: weekday-grouped event list with edit/delete/add buttons
+  - `<hmip-device-schedule-editor>`: modal form editor for time, condition, weekdays, level, duration, ramp time, and target channels
+- Card is now a thin wrapper around shared components (~1724 LOC → ~530 LOC)
 - Data format: bitwise flags replaced with string arrays (weekdays, target_channels)
 - Duration: base+factor system replaced with duration strings ("4h", "10s", "5min", "500ms")
 - Domain inference from `schedule_domain` entity attribute instead of `datapoint_category`
@@ -56,6 +61,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BackendScheduleDict` and format conversion functions
 - Base+factor duration system (`calculateDuration`, `formatDuration`)
 - LOCK device category
+
+### Technical
+
+- Added `@hmip/schedule-ui` workspace dependency
+- Moved weekday-grouped list rendering, event row rendering, editor dialog, all form field methods, and related CSS into shared components
+- Card retains entity/config management, service calls, import/export, and loading/error states
+- Communication with shared components via typed CustomEvents (`add-event`, `edit-event`, `delete-event`, `save-event`, `editor-closed`)
+- Translation bridge methods map card localization to component translation interfaces
+- Added `_isNewEvent` state to distinguish add vs edit mode in shared editor component
+- Removed direct dependencies: `lit/directives/repeat.js`, numerous `@hmip/schedule-core` utilities now consumed internally by schedule-ui
 
 ## [0.1.0] - 2025-11-13
 
