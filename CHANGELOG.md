@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `<hmip-device-schedule-list>`: weekday-grouped event list with edit/delete/add buttons
   - `<hmip-device-schedule-editor>`: modal form editor for time, condition, weekdays, level, duration, ramp time, and target channels
 - Card is now a thin wrapper around shared components (~1724 LOC → ~530 LOC)
+- **Backend communication now uses WebSocket API (`hass.callWS()`)** instead of service calls:
+  `set_device_schedule` and `reload_device_config` use WebSocket endpoints with `entry_id`
+  from entity `config_entry_id` attribute.
+- **Read-only mode for non-admin users**: Card is automatically read-only when
+  `hass.user.is_admin` is `false`. Edit UI (add/edit/delete events, import, hint text) is
+  hidden. Export remains accessible to all users.
 - Data format: bitwise flags replaced with string arrays (weekdays, target_channels)
 - Duration: base+factor system replaced with duration strings ("4h", "10s", "5min", "500ms")
 - Domain inference from `schedule_domain` entity attribute instead of `datapoint_category`
@@ -66,11 +72,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `@hmip/schedule-ui` workspace dependency
 - Moved weekday-grouped list rendering, event row rendering, editor dialog, all form field methods, and related CSS into shared components
-- Card retains entity/config management, service calls, import/export, and loading/error states
+- Card retains entity/config management, WebSocket calls, import/export, and loading/error states
 - Communication with shared components via typed CustomEvents (`add-event`, `edit-event`, `delete-event`, `save-event`, `editor-closed`)
 - Translation bridge methods map card localization to component translation interfaces
 - Added `_isNewEvent` state to distinguish add vs edit mode in shared editor component
 - Removed direct dependencies: `lit/directives/repeat.js`, numerous `@hmip/schedule-core` utilities now consumed internally by schedule-ui
+- Added `HassUser` type and `user` property to `HomeAssistant` in `@hmip/schedule-core`
+- Added `config_entry_id` to `DeviceScheduleEntityAttributes` in `@hmip/schedule-core`
+- Added `_isEditable` getter combining `config.editable` flag with `hass.user.is_admin`
+- Added `_requireConfigEntryId` helper for WebSocket calls
 
 ## [0.1.0] - 2025-11-13
 
