@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Domain labels in localization (EN + DE)
 - Condition labels in localization (EN + DE)
 
+### Fixed
+
+- Fixed `ha-select` dropdown closing the editor dialog — `ha-select` fires an internal `closed` event that bubbled up to the outer `ha-dialog`, causing the entire editor to close when selecting a condition, astro type, level, or duration/ramp time unit
+- Fixed editor dialog closing on save even when validation errors exist — removed `dialogAction="close"` from save button so validation errors remain visible
+- Target channels are now optional — schedule entries without target channels can be saved and are displayed dimmed (opacity 0.5) in the schedule list to indicate inactive state
+- Removed frontend `target_channels` validation that blocked saving entries without a selected channel (CCU allows `TARGET_CHANNELS = 0`)
+
 ### Changed
 
 - Extracted schedule list and event editor into shared `@hmip/schedule-ui` package for consistent UX across card and config panel
@@ -50,10 +57,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `lit` 3.0.0 → 3.3.2
   - `tslib` 2.6.0 → 2.8.1
   - `typescript` 5.3.3 → 5.9.3
-  - `eslint` 9.39.1 → 9.39.2
-  - `typescript-eslint` 8.16.0 → 8.54.0
+  - `eslint` 9.39.1 → 10.0.2
+  - `typescript-eslint` 8.16.0 → 8.56.1
   - `prettier` 3.1.0 → 3.8.1
-  - `rollup` 4.9.0 → 4.57.1
+  - `rollup` 4.9.0 → 4.59.0
   - `husky` 9.0.0 → 9.1.7
   - `ts-jest` 29.1.1 → 29.4.6
 - Improved release workflow with changelog extraction
@@ -81,6 +88,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `config_entry_id` to `DeviceScheduleEntityAttributes` in `@hmip/schedule-core`
 - Added `_isEditable` getter combining `config.editable` flag with `hass.user.is_admin`
 - Added `_requireConfigEntryId` helper for WebSocket calls
+- Added `@closed` event stopPropagation on all `ha-select` elements to prevent dialog closure
+- `entryToBackend` now always sends `target_channels` (even empty arrays)
+- `isEntryActive` checks both weekdays and target_channels for visual state
 
 ## [0.1.0] - 2025-11-13
 
