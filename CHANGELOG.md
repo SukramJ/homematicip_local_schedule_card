@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `ha-select` compatibility with Home Assistant 2026.3.0+ — migrated entity selector and all editor dropdowns (condition, astro type, level, duration/ramp time unit) from `ha-list-item` children to `.options` property API. Requires HA 2026.3.0+.
 - Fixed `ha-select` dropdown closing the editor dialog — `ha-select` fires an internal `closed` event that bubbled up to the outer `ha-dialog`, causing the entire editor to close when selecting a condition, astro type, level, or duration/ramp time unit
 - Fixed editor dialog closing on save even when validation errors exist — removed `dialogAction="close"` from save button so validation errors remain visible
 - Target channels are now optional — schedule entries without target channels can be saved and are displayed dimmed (opacity 0.5) in the schedule list to indicate inactive state
