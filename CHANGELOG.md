@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed editor dialog closing on save even when validation errors exist — removed `dialogAction="close"` from save button so validation errors remain visible
 - Target channels are now optional — schedule entries without target channels can be saved and are displayed dimmed (opacity 0.5) in the schedule list to indicate inactive state
 - Removed frontend `target_channels` validation that blocked saving entries without a selected channel (CCU allows `TARGET_CHANNELS = 0`)
+- Fixed `ha-dialog` compatibility with Home Assistant 2026.4.0+ — migrated all `--mdc-*` CSS custom properties to `--ha-*` equivalents (`--ha-icon-button-size`, `--ha-icon-button-icon-size`, `--ha-dialog-max-width`, `--ha-dialog-max-height`), replaced `--mdc-typography-button-font-size` with standard `font-size`, and replaced `--mdc-theme-primary` on `ha-circular-progress` with `color`
+- Fixed `ha-dialog` button slots removed in Home Assistant 2026.4.0+ — moved save/cancel buttons from `slot="primaryAction"`/`slot="secondaryAction"` into the dialog content body, and removed deprecated `scrimClickAction`/`escapeKeyAction` attributes
 
 ### Changed
 
